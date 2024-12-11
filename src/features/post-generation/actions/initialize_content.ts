@@ -4,8 +4,8 @@ import {naverUtils} from "../utils/naver";
 import { Persona } from "../types";
 
 export async function initializeContent(
-  keyword: string,
-   persona: Persona
+    keyword: string,
+    persona: Persona
   )
   {
 
@@ -16,15 +16,19 @@ export async function initializeContent(
 
 
   // 서비스 분석 데이터 생성
-  const serviceAnalysis = persona ? analyzeService(persona) : {};
+  const serviceAnalysis = persona ? analyzeService(persona) : {
+    industry_analysis: '산업에 대한 분석 내용...',
+    advantage_analysis: "장점 분석...",
+    target_needs: "타겟 고객의 요구 사항 분석..."
+};
 
   // 검색 데이터 생성
-  const subkeywords = getSearchData(keyword);
+  const searchDatas = await getSearchData(keyword);
 
   // 응답 데이터
   return {
     service_analysis: serviceAnalysis,
-    subkeywords: subkeywords,
+    search_datas: searchDatas,
   };
 }
 
@@ -35,7 +39,7 @@ const { fetchGeneralSearch } = naverUtils;
 //html은 가져오는데 연관 검색어 추출을 못함
 
 // 검색 데이터 생성 함수
- async function getSearchData(keyword: string) {
+async function getSearchData(keyword: string) {
   console.log("getSearchData 시작 -키워드:", keyword);
   const html = await fetchGeneralSearch(keyword);
   console.log('HTML 데이터 받음, 길이:', html.length);
@@ -129,10 +133,10 @@ const removeHTMLTags = (text: string) => {
     .trim();
 };
 
- function analyzeService(persona: any) {
-    return {
-      industry_analysis: `${persona.service_industry} 산업에 대한 분석 내용...`,
-      advantage_analysis: `${persona.service_advantage}의 장점 분석...`,
-      target_needs: '타겟 고객의 요구 사항 분석...',
-    };
-  }
+function analyzeService(persona: Persona) {
+  return {
+    industry_analysis: `${persona.service_industry} 산업에 대한 분석 내용...`,
+    advantage_analysis: `${persona.service_advantage}의 장점 분석...`,
+    target_needs: '타겟 고객의 요구 사항 분석...',
+  };
+}
