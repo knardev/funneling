@@ -20,7 +20,7 @@ export async function initializeContent(
     industry_analysis: '산업에 대한 분석 내용...',
     advantage_analysis: "장점 분석...",
     target_needs: "타겟 고객의 요구 사항 분석..."
-};
+  };
 
   // 검색 데이터 생성
   const searchDatas = await getSearchData(keyword);

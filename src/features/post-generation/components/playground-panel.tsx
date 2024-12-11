@@ -137,14 +137,15 @@ export function PlaygroundPanel() {
   const handleGenerateImages = async () => {
     updateLog("Generating images...");
     const result = await generateImage(
-      keyword,
-      subkeywords,
-      title,
-      serviceAnalysis?.advantage_analysis || "",
-      toc,
-      intro,
-      body,
-      conclusion,
+      keywordObj,
+      persona,
+      {
+        title,
+        toc,
+        intro,
+        body,
+        conclusion,
+      },
       imagePrompts
     );
     setImages(result.images);
