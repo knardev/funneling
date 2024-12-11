@@ -1,9 +1,13 @@
 "use server";
 
 import {naverUtils} from "../utils/naver";
-import { Keyword,Persona} from "../types";
+import { Persona } from "../types";
 
-export async function initializeContent(keyword: Keyword, persona: Persona) {
+export async function initializeContent(
+  keyword: string,
+   persona: Persona
+  )
+  {
 
   // 필수 데이터 확인
   if (!keyword) {

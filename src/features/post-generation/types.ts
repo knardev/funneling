@@ -17,4 +17,10 @@ export interface Content {
     conclusion: string;
     }
 
+export interface Image {
+    imagePrompts: string;
+    imageurl: string;
+    section: string;
+    position: string;
+}
 export * from './types';
