@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar";
+import { ModeToggle } from "@/components/custom-ui/mode-toggle";
 
 const geistSans = localFont({
   src: "../fonts/GeistVF.woff",
@@ -22,8 +23,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "캐치블로그 대시보드",
-  description: "캐치블로그 대시보드",
+  title: "퍼널링 대시보드",
+  description: "퍼널링 대시보드",
 };
 
 export default function RootLayout({
@@ -48,6 +49,7 @@ export default function RootLayout({
                 <main className="p-4 overflow-auto h-screen">
                   {/* <SidebarTrigger /> */}
                   {children}
+                  {/* <ModeToggle /> */}
                   <Toaster />
                 </main>
               </SidebarInset>

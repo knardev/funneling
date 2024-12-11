@@ -1,4 +1,5 @@
 "use server";
+
 import { Keyword, Persona } from "../../types";
 
 export async function generateBody(
@@ -6,11 +7,12 @@ export async function generateBody(
   persona: Persona,
   title: string,
   toc:string,
-  intro:string) {
+  intro:string
+) {
 
 
   // 응답 데이터
   return {
-    body:body
+    body
   };
 }
