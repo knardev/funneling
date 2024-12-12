@@ -7,13 +7,12 @@ import { initialContentPrompt } from "../prompts/initialcontentPrompt";
 
 export async function initializeContent(
     keyword: string,
-    persona: Persona
+    persona?: Persona
   ):Promise<{
-    service_analysis: Analysis;
+    service_analysis?: Analysis;
     subkeywordlist: string[];
   }>
   {
-console.log(persona)
   // 필수 데이터 확인
   if (!keyword) {
     throw new Error('키워드는 필수 데이터입니다.');
@@ -191,10 +190,10 @@ function extractJsonFromResponse(response: ApiResponse): Analysis {
 
 
     return {
-      industry_analysis: parsedData.industry_analysis,
-      advantage_analysis: parsedData.advantage_analysis,
-      target_needs: parsedData.target_needs,
-      marketing_points: parsedData.marketing_points
+      industry_analysis: parsedData.industry_analysis || '',
+      advantage_analysis: parsedData.advantage_analysis || '',
+      target_needs: parsedData.target_needs || '',
+      marketing_points: parsedData.marketing_points || ''
     }
   } catch (error) {
     console.error('Error extracting JSON:', error);

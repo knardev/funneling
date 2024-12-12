@@ -26,7 +26,7 @@ import { Analysis } from "../types";
 export function PlaygroundPanel() {
   // Input states
   const [keyword, setKeyword] = useState("");
-  const [subkeywords, setSubKeywords] = useState("");
+  const [subkeywords, setSubKeywords] = useState<string[]>([]);
   const [personaServiceName, setPersonaServiceName] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [serviceAdvantages, setServiceAdvantages] = useState("");
@@ -58,7 +58,7 @@ export function PlaygroundPanel() {
 
   const keywordObj = {
     keyword,
-    subkeywords: "",
+    subkeywords: [],
   };
 
   // Utility function to update logs
@@ -82,7 +82,7 @@ export function PlaygroundPanel() {
     updateLog("Generating title...");
     const result = await generateTitle(keywordObj, persona);
     setTitle(result.title);
-    // setSubKeywords(result.subkeyword);
+    setSubKeywords(result.subkeywords);
     updateLog(`Title generated: ${JSON.stringify(result)}`);
   };
 
@@ -95,14 +95,14 @@ export function PlaygroundPanel() {
 
   const handleGenerateIntro = async () => {
     updateLog("Generating intro...");
-    const result = await generateIntro(keywordObj, title, persona, toc);
+    const result = await generateIntro(keywordObj, title, toc, serviceAnalysis);
     setIntro(result.intro);
     updateLog(`Intro generated: ${JSON.stringify(result)}`);
   };
 
   const handleGenerateBody = async () => {
     updateLog("Generating body...");
-    const result = await generateBody(keywordObj, persona, title, toc, intro);
+    const result = await generateBody(keywordObj, title, toc, intro, serviceAnalysis);
     setBody(result.body);
     updateLog(`Body generated: ${JSON.stringify(result)}`);
   };
@@ -169,7 +169,7 @@ export function PlaygroundPanel() {
   // Reset all states
   const handleResetStates = () => {
     setKeyword("");
-    setSubKeywords("");
+    setSubKeywords([]);
     setPersonaServiceName("");
     setServiceType("");
     setServiceAdvantages("");
@@ -266,7 +266,7 @@ export function PlaygroundPanel() {
             <pre>Service Type: {serviceType}</pre>
             <pre>Service Advantages: {serviceAdvantages}</pre>
             <pre>Service Analysis: {JSON.stringify(serviceAnalysis)}</pre>
-            <pre>Subkeywords: {subkeywords}</pre>
+            <pre>Subkeywords: {subkeywords.join(", ")}</pre>
             <pre>Title: {title}</pre>
             <pre>TOC: {toc}</pre>
             <pre>Intro: {intro}</pre>

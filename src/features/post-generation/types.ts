@@ -1,6 +1,6 @@
 export interface KeywordObj {
     keyword: string;
-    subkeywords: string;
+    subkeywords: string[];
   }
   
   export interface Persona {

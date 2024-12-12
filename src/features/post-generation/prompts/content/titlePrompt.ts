@@ -1,3 +1,5 @@
+import { Analysis } from "../../types";
+
 export const titlePrompt = {
     system: `You are a professional SEO expert who specializes in creating highly effective blog titles.`,
     template: `### 블로그 제목 최적화 분석 ###
@@ -53,12 +55,14 @@ export const titlePrompt = {
       mainKeyword: string,
       highImportanceTitles: string[],
       lowImportanceTitles: string[],
-      subkeywords: string[]
+      subkeywords: string[],
+      analysis?: Analysis
     ): string => {
       return titlePrompt.template
         .replace("{mainKeyword}", mainKeyword)
         .replace("{highImportanceTitles}", highImportanceTitles.join('\n'))
         .replace("{lowImportanceTitles}", lowImportanceTitles.join('\n'))
-        .replace("{subkeywords}", subkeywords.join('\n'));
+        .replace("{subkeywords}", subkeywords.join('\n'))
+        .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
   };

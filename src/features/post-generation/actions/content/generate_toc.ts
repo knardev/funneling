@@ -8,25 +8,27 @@ import { makeClaudeRequest } from "../../utils/ai/claude";
 export async function generateToc(
   keyword: KeywordObj,
   title: string,
-  analysis: Analysis
+  analysis?: Analysis
 )
 {
-
-  const response= makeClaudeRequest<{
+console.log(keyword)
+console.log(title)
+  const response= await makeClaudeRequest<{
     toc:string
   }>(
     tocPrompt.generatePrompt(
-      KeywordObj.keyword,
-      KeywordObj.subkeywords,    
+      keyword.keyword,
+      keyword.subkeywords,    
       title
     ),
     tocPrompt.system
   )
 
+  const toc= response.toc
  {
   // 응답 데이터
   return {
     toc:toc
-}
+  }
  }
 }

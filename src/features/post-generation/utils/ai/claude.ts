@@ -39,32 +39,56 @@ const CLAUDE_CONFIG = {
       headers: headers as Record<string, string>,
       body: JSON.stringify(payload)
     })
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result = await response.json();
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP 오류! 상태: ${response.status}, 내용: ${errorText}`);
+      }
+  
+      const result = await response.json();
+  
+      if (!result.content?.[0]?.text) {
+        throw new Error('응답에서 컨텐츠를 찾을 수 없습니다');
+      }
+  
+      const content = result.content[0].text;
+      const parsedContent = tryParseJson(content);
+  
+      if (responseTransformer) {
+        return responseTransformer(parsedContent);
+      }
+  
+      return parsedContent as T;
+  
+    } catch (error) {
+      console.error('API 요청 오류:', error);
+      throw error;
+    }
+  }
 
-        if(!result.content?.[0]?.text) {
-            throw new Error('No content found in the response');
-        }
-
+      function sanitizeJsonString(str: string): string {
+        return str
+          .replace(/[\u0000-\u001F]+/g, '') // 제어 문자 제거
+          .replace(/\n/g, '\\n')           // 개행 문자 이스케이프
+          .replace(/\r/g, '\\r')           // 캐리지 리턴 이스케이프
+          .replace(/\t/g, '\\t');          // 탭 문자 이스케이프
+      }
+      
+      /**
+       * JSON 파싱을 시도하는 함수
+       */
+      function tryParseJson(text: string): any {
         try {
-            const parsedContent = await JSON.parse(result.content[0].text);
-            console.log('Parsed Content:', parsedContent);
-      
-            if (responseTransformer) {
-              return responseTransformer(parsedContent);
-            }
-      
-            return parsedContent as T;
-          } catch (parseError) {
-            console.error('JSON Parse Error:', parseError);
-            console.log('Failed to parse text:', result.content[0].text);
-            throw new Error('Failed to parse API response');
+          // 먼저 원본 텍스트로 시도
+          return JSON.parse(text);
+        } catch (e) {
+          try {
+            // 실패하면 정리된 텍스트로 다시 시도
+            const sanitized = sanitizeJsonString(text);
+            return JSON.parse(sanitized);
+          } catch (e2) {
+            console.error('JSON 파싱 실패:', e2);
+            console.log('원본 텍스트:', text);
+            throw new Error('JSON 응답 파싱 실패');
           }
-      
-        } catch (error) {
-          console.error('Error in API request:', error);
-          throw error;
         }
       }

@@ -1,3 +1,5 @@
+import { Analysis } from "../../types";
+
 export const tocPrompt = {
     system: `You are a professional content strategist who understands user search intent and information needs.`,
     template: `
@@ -16,31 +18,30 @@ export const tocPrompt = {
     - 최대 5개의 대주제로 한정하여 핵심 정보에 집중
     - 목차는 한글로 작성해야 합니다.
     - 각 목차는 독자가 얻을 수 있는 구체적인 가치나 혜택이 드러나도록 작성합니다.
-    - **반드시 목차만 출력해야합니다.**
+    - **반드시 아래 JSON 형식만 출력해야합니다.**
     
-    출력 형식:
-    목차
-    
-    1. [가장 시급한 궁금증/니즈를 해결하는 내용]
-    
-    2. [두 번째로 중요한 정보/해결책]
-    
-    3. [보충 설명이 필요한 핵심 내용]
-    
-    4. [실용적인 팁이나 적용 방법]
-    
-    5. [독자의 행동을 유도하는 결론]
-    
+    JSON 출력 형식:
+    {
+      "toc": [
+        1."가장 시급한 궁금증/니즈를 해결하는 내용",
+        2."두 번째로 중요한 정보/해결책",
+        3."보충 설명이 필요한 핵심 내용",
+        4."실용적인 팁이나 적용 방법",
+        5."독자의 행동을 유도하는 결론"
+      ]
+    }
 
     `,
     generatePrompt: (
       mainKeyword: string,
       subkeywords: string[],
-      title:string
+      title:string,
+      analysis?: Analysis
     ): string => {
       return tocPrompt.template
         .replace("{mainKeyword}", mainKeyword)
         .replace("{subkeywords}", subkeywords.join('\n'))
-        .replace("{title}", title);
+        .replace("{title}", title)
+        .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
   };
