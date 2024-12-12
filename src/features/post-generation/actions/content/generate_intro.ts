@@ -8,7 +8,6 @@ export async function generateIntro(
     title: string,
     persona: Persona,
     toc:string) 
-    
     {
 
 

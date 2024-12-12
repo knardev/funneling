@@ -21,6 +21,8 @@ import { generateConclusion } from "@/features/post-generation/actions/content/g
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 
+import { Analysis } from "../types";
+
 export function PlaygroundPanel() {
   // Input states
   const [keyword, setKeyword] = useState("");
@@ -30,15 +32,13 @@ export function PlaygroundPanel() {
   const [serviceAdvantages, setServiceAdvantages] = useState("");
 
   // Result states
-  const [serviceAnalysis, setServiceAnalysis] = useState<{
-    industry_analysis: string;
-    advantage_analysis: string;
-    target_needs: string;
-  } | null>(null);
-  const [searchDatas, setSearchDatas] = useState<{
-    related_terms: string[];
-    autocomplete: string[];
-  } | null>(null);
+  const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
+    industry_analysis: null,
+    advantage_analysis: null,
+    target_needs: null,
+    marketing_points: null,
+  });
+  const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [title, setTitle] = useState("");
   const [toc, setToc] = useState("");
   const [intro, setIntro] = useState("");
@@ -74,7 +74,7 @@ export function PlaygroundPanel() {
     updateLog("Initializing content...");
     const result = await initializeContent(keyword, persona);
     setServiceAnalysis(result.service_analysis);
-    setSearchDatas(result.search_datas);
+    setSubKeywordlist(result.subkeywordlist);
     updateLog(`Content initialized: ${JSON.stringify(result)}`);
   };
 
@@ -88,7 +88,7 @@ export function PlaygroundPanel() {
 
   const handleGenerateToc = async () => {
     updateLog("Generating TOC...");
-    const result = await generateToc(keywordObj, title, persona);
+    const result = await generateToc(keywordObj, title, serviceAnalysis);
     setToc(result.toc);
     updateLog(`TOC generated: ${JSON.stringify(result)}`);
   };
@@ -173,8 +173,13 @@ export function PlaygroundPanel() {
     setPersonaServiceName("");
     setServiceType("");
     setServiceAdvantages("");
-    setSearchDatas(null);
-    setServiceAnalysis(null);
+    setSubKeywordlist(null);
+    setServiceAnalysis({
+      industry_analysis: null,
+      advantage_analysis: null,
+      target_needs: null,
+      marketing_points: null,
+    });
     setTitle("");
     setToc("");
     setIntro("");

@@ -1,16 +1,32 @@
 "use server";
 
-import { Keyword,Content,Persona } from "../../types";
+import { tocPrompt } from "../../prompts/content/tocPrompt";
+import { KeywordObj, Analysis } from "../../types";
+import { makeClaudeRequest } from "../../utils/ai/claude";
 
 
 export async function generateToc(
-  keyword: Keyword,
+  keyword: KeywordObj,
   title: string,
-  persona: Persona
+  analysis: Analysis
 )
+{
+
+  const response= makeClaudeRequest<{
+    toc:string
+  }>(
+    tocPrompt.generatePrompt(
+      KeywordObj.keyword,
+      KeywordObj.subkeywords,    
+      title
+    ),
+    tocPrompt.system
+  )
+
  {
   // 응답 데이터
   return {
     toc:toc
-  };
+}
+ }
 }

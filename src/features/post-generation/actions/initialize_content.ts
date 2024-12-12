@@ -1,39 +1,46 @@
 "use server";
 
 import {naverUtils} from "../utils/naver";
-import { Persona } from "../types";
+import { Analysis, ApiResponse, Persona } from "../types";
+import { makeClaudeRequest } from "../utils/ai/claude";
+import { initialContentPrompt } from "../prompts/initialcontentPrompt";
 
 export async function initializeContent(
     keyword: string,
     persona: Persona
-  )
+  ):Promise<{
+    service_analysis: Analysis;
+    subkeywordlist: string[];
+  }>
   {
-
+console.log(persona)
   // 필수 데이터 확인
   if (!keyword) {
     throw new Error('키워드는 필수 데이터입니다.');
   }
 
-
   // 서비스 분석 데이터 생성
-  const serviceAnalysis = persona ? analyzeService(persona) : {
-    industry_analysis: '산업에 대한 분석 내용...',
-    advantage_analysis: "장점 분석...",
-    target_needs: "타겟 고객의 요구 사항 분석..."
-  };
+const serviceAnalysis: Analysis = persona ? await analyzeService(persona) : {
+  industry_analysis: "",
+  advantage_analysis: "",
+  target_needs: "",
+  marketing_points: ""
+};
+
 
   // 검색 데이터 생성
-  const searchDatas = await getSearchData(keyword);
+  const subkeywordlist:string[] = await getSearchData(keyword);
 
   // 응답 데이터
   return {
-    service_analysis: serviceAnalysis,
-    search_datas: searchDatas,
+      service_analysis: serviceAnalysis,
+      subkeywordlist: subkeywordlist
   };
 }
 
 
-const { fetchGeneralSearch } = naverUtils;
+const { fetchGeneralSearch, fetchAutocomplete } = naverUtils;
+
 
 
 //html은 가져오는데 연관 검색어 추출을 못함
@@ -41,35 +48,30 @@ const { fetchGeneralSearch } = naverUtils;
 // 검색 데이터 생성 함수
 async function getSearchData(keyword: string) {
   console.log("getSearchData 시작 -키워드:", keyword);
-  const html = await fetchGeneralSearch(keyword);
-  console.log('HTML 데이터 받음, 길이:', html.length);
+  const html1 = await fetchGeneralSearch(keyword);
+  console.log('HTML 데이터 받음, 길이:', html1.length);
   
-  const processSearchTerms = (html: string) => {
-      console.log('processSearchTerms 시작');
-      const searchTerms = extractRelatedSearchTerms(html);
-      console.log('추출된 연관 검색어:', searchTerms);
-      const processed = searchTerms.map(removeHTMLTags);
+  const processRelatedTerms = (html1: string) => {
+      console.log('processRelatedTerms 시작');
+      const relatedTerms = extractRelatedSearchTerms(html1);
+      const processed = relatedTerms.map(removeHTMLTags);
       console.log('HTML 태그 제거 후 연관 검색어:', processed);
       return processed;
     }
   
 
-    const processAutocomplete = (html: string) => {
-      console.log('processAutocomplete 시작');
-      const autocomplete = extractAutocomplete(html);
-      console.log('추출된 자동완성:', autocomplete);
+    const processAutocomplete = async (keyword: string) => {
+      const autocomplete = await extractAutocomplete(keyword);
       const processed = autocomplete.map(removeHTMLTags);
       console.log('HTML 태그 제거 후 자동완성:', processed);
       return processed;
     }
 
-  const relatedTerms = processSearchTerms(html);
-  const autocompleteTerms = processAutocomplete(html);
+  const relatedTerms = processRelatedTerms(html1);
+  const autocompleteTerms = processAutocomplete(keyword);
+  const subkeywords = relatedTerms.concat(await autocompleteTerms)
 
-  return {
-    related_terms: relatedTerms,
-    autocomplete: autocompleteTerms
-  };
+  return subkeywords;
 }
 
 const extractRelatedSearchTerms = (html: string) => {
@@ -102,27 +104,7 @@ const extractRelatedSearchTerms = (html: string) => {
   }
 };
 
-const extractAutocomplete = (html: string) => {
-  const keywords: string[] = [];
 
-  try {
-    // fds-keyword-text를 포함하는 span 태그를 찾는 정규식
-    const regex = /<span[^>]*class=["'][^"']*fds-keyword-text[^"']*["'][^>]*>(.*?)<\/span>/g;
-    let match;
-
-    while ((match = regex.exec(html)) !== null) {
-      const text = match[1].trim();
-      if (text) {
-        keywords.push(text);
-      }
-    }
-
-    return keywords;
-  } catch (error) {
-    console.error('키워드 추출 중 오류 발생:', error);
-    return keywords;
-  }
-};
 
 const removeHTMLTags = (text: string) => {
   if (!text) return '';
@@ -133,10 +115,89 @@ const removeHTMLTags = (text: string) => {
     .trim();
 };
 
-function analyzeService(persona: Persona) {
+export async function extractAutocomplete(keyword: string) {
+  if (!keyword) {
+    console.error("Invalid or empty keyword provided.");
+    return [];
+  }
+
+  try {
+    let allResults = [];
+
+    // 기본 키워드 자동완성 결과
+    const mainResults = await fetchAutocomplete(keyword);
+    if (mainResults && mainResults.length > 0) {
+      allResults.push(...mainResults);
+    }
+
+    // 초성 ㄱ부터 ㅎ까지 생성
+    const suffixes = Array.from({ length: 14 }, (_, i) => String.fromCharCode(0x3131 + i));
+
+    // 확장 키워드 검색 (초성을 접미사로 추가)
+    for (const suffix of suffixes) {
+      const extendedResults = await fetchAutocomplete(`${keyword} ${suffix}`);
+      if (extendedResults && extendedResults.length > 0) {
+        allResults.push(...extendedResults);
+      }
+    }
+
+    // 중복 제거 후 반환
+    return Array.from(new Set(allResults));
+  } catch (error) {
+    console.error('Error in extractAutocomplete:', error);
+    return [];
+  }
+}
+
+
+
+async function analyzeService(persona: Persona ):Promise<Analysis> {
+
+  const analysis = await makeClaudeRequest<ApiResponse>(
+    initialContentPrompt.generatePrompt(
+    persona.service_name,
+    persona.service_industry, 
+    persona.service_advantage
+  ),
+    initialContentPrompt.system,
+    (response: ApiResponse) => ({
+      ...extractJsonFromResponse(response),
+      apiResponse: response.apiResponse
+    })
+  );
+
+  const analysisresult=extractJsonFromResponse(analysis)
+
+
   return {
-    industry_analysis: `${persona.service_industry} 산업에 대한 분석 내용...`,
-    advantage_analysis: `${persona.service_advantage}의 장점 분석...`,
-    target_needs: '타겟 고객의 요구 사항 분석...',
+    industry_analysis: analysisresult.industry_analysis,
+    advantage_analysis: analysisresult.advantage_analysis,
+    target_needs: analysisresult.target_needs,
+    marketing_points: analysisresult.marketing_points
   };
+}
+
+
+function extractJsonFromResponse(response: ApiResponse): Analysis {
+  try {
+    const jsonMatch = response.apiResponse.match(/\{[\s\S]*\}/);
+    
+    if (!jsonMatch) {
+      throw new Error('No valid JSON found in response');
+    }
+
+    const jsonText = jsonMatch[0];
+    const parsedData:Analysis = JSON.parse(jsonText);
+
+
+    return {
+      industry_analysis: parsedData.industry_analysis,
+      advantage_analysis: parsedData.advantage_analysis,
+      target_needs: parsedData.target_needs,
+      marketing_points: parsedData.marketing_points
+    }
+  } catch (error) {
+    console.error('Error extracting JSON:', error);
+    throw new Error('Failed to extract JSON from response');
+  }
 }
