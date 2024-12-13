@@ -1,7 +1,7 @@
 "use server";
 import { Analysis, KeywordObj, Persona } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
-import { bodyPrompt } from "../../prompts/content/bodyPrompt";
+import { bodyPrompt } from "../../prompts/contentPrompt/bodyPrompt";
 
 export async function generateBody(
   keyword: KeywordObj,
@@ -10,8 +10,6 @@ export async function generateBody(
   intro:string,
   analysis?: Analysis) {
     
-    console.log("intro",intro)
-
 
     const response=await makeClaudeRequest<{
         optimized_body:string
@@ -28,7 +26,7 @@ export async function generateBody(
     ) 
 
     const body=await response.optimized_body
-
+console.log("generateBody 응답 데이터",JSON.stringify(response))
   // 응답 데이터
   return {
     body:body

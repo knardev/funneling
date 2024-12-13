@@ -6,7 +6,7 @@ const CLAUDE_CONFIG = {
       KEY: process.env.NEXT_PUBLIC_CLAUDE_API_KEY, // Claude API Key (보안을 위해 실제 키를 넣으세요)
       VERSION: "2023-06-01", // API 버전
       MODEL: "claude-3-5-sonnet-20241022", // 모델 이름
-      MAX_TOKENS: 2000 // 최대 토큰 수
+      MAX_TOKENS: 4000 // 최대 토큰 수
     }
   }
 

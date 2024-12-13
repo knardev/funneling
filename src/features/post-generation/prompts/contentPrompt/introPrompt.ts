@@ -1,3 +1,5 @@
+import { Analysis } from "../../types";
+
 export const introPrompt = {
     system: `
     You're an professional Blogger in Korea Every sentence should be short,
@@ -176,7 +178,8 @@ export const introPrompt = {
       mainKeyword: string,
       subkeywords: string[],
       title:string,
-      toc:string
+      toc:string,
+      analysis?: Analysis
     ): string => {
       return introPrompt.template
         .replace("{mainKeyword}", mainKeyword)

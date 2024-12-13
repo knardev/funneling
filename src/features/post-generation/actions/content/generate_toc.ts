@@ -1,6 +1,6 @@
 "use server";
 
-import { tocPrompt } from "../../prompts/content/tocPrompt";
+import { tocPrompt } from "../../prompts/contentPrompt/tocPrompt";
 import { KeywordObj, Analysis } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 
@@ -25,6 +25,7 @@ console.log(title)
   )
 
   const toc= response.toc
+  console.log("generateToc 응답 데이터",response)
  {
   // 응답 데이터
   return {

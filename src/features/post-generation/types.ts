@@ -23,12 +23,6 @@ export interface Content {
     conclusion: string;
     }
 
-export interface Image {
-    imagePrompts: string;
-    imageurl: string;
-    section: string;
-    position: string;
-}
 
 export interface ApiResponse {
   apiResponse: string;
@@ -38,6 +32,22 @@ export interface ApiResponse {
 export interface TitleResponse {
   title: string;
   subkeywords: string[];
+}
+
+export interface PredictionInput {
+  id: string;
+  prompt: string;
+}
+// 예측 응답 인터페이스
+export interface PredictionResponse {
+  uuid: string;
+  status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
+  urls: {
+    get: string;
+  };
+  error?: {
+    message: string;
+  };
 }
 
 export * from './types';

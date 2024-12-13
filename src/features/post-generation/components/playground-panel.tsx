@@ -44,7 +44,8 @@ export function PlaygroundPanel() {
   const [intro, setIntro] = useState("");
   const [body, setBody] = useState("");
   const [conclusion, setConclusion] = useState("");
-  const [imagePrompts, setImagePrompts] = useState("");
+  const [updatedContent, setUpdatedContent] = useState("");
+  const [imagePrompts, setImagePrompts] = useState<{id:string,prompt:string}[]>([]);
   const [images, setImages] = useState("");
 
   // Debug log state
@@ -72,8 +73,11 @@ export function PlaygroundPanel() {
   // Individual step execution handlers
   const handleInitializeContent = async () => {
     updateLog("Initializing content...");
-    const result = await initializeContent(keyword, persona);
-    setServiceAnalysis(result.service_analysis);
+    const hasAllPersonaData=personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim()
+    const result = await initializeContent(keyword, hasAllPersonaData ? persona : undefined);
+    if (result.service_analysis) {
+      setServiceAnalysis(result.service_analysis);
+    }
     setSubKeywordlist(result.subkeywordlist);
     updateLog(`Content initialized: ${JSON.stringify(result)}`);
   };
@@ -111,11 +115,11 @@ export function PlaygroundPanel() {
     updateLog("Generating conclusion...");
     const result = await generateConclusion(
       keywordObj,
-      persona,
       title,
       toc,
       intro,
-      body
+      body,
+      serviceAnalysis
     );
     setConclusion(result.conclusion);
     updateLog(`Conclusion generated: ${JSON.stringify(result)}`);
@@ -123,32 +127,26 @@ export function PlaygroundPanel() {
 
   const handleGenerateImagePrompt = async () => {
     updateLog("Generating image prompts...");
-    const result = await generateImagePrompt(keywordObj, persona, {
+    const result = await generateImagePrompt({
       title,
       toc,
       intro,
       body,
       conclusion,
-    });
-    setImagePrompts(result.imagePrompts);
-    updateLog(`Image prompts generated: ${JSON.stringify(result)}`);
+    }, serviceAnalysis);
+    if(result.updatedContent){
+      setUpdatedContent(result.updatedContent)
+      setImagePrompts(result.imagePrompts);
+    }
+    updateLog(`Image prompts generated: ${JSON.stringify(result.imagePrompts)}`);
   };
 
   const handleGenerateImages = async () => {
     updateLog("Generating images...");
     const result = await generateImage(
-      keywordObj,
-      persona,
-      {
-        title,
-        toc,
-        intro,
-        body,
-        conclusion,
-      },
       imagePrompts
     );
-    setImages(result.images);
+    setImages(result.images.map((image)=>image.imageUrl).join("\n"));
     updateLog(`Images generated: ${JSON.stringify(result)}`);
   };
 
@@ -185,7 +183,8 @@ export function PlaygroundPanel() {
     setIntro("");
     setBody("");
     setConclusion("");
-    setImagePrompts("");
+    setUpdatedContent("");
+    setImagePrompts([]);
     setImages("");
     setDebugLogs([]);
     updateLog("States reset.");
@@ -195,7 +194,7 @@ export function PlaygroundPanel() {
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={25} maxSize={25}>
-          <div className="p-4 flex flex-col gap-4 h-full">
+          <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
             <h2>Initial Input</h2>
             <div>
               <Label>Keyword</Label>
@@ -272,7 +271,8 @@ export function PlaygroundPanel() {
             <pre>Intro: {intro}</pre>
             <pre>Body: {body}</pre>
             <pre>Conclusion: {conclusion}</pre>
-            <pre>Image Prompts: {imagePrompts}</pre>
+            <pre>Updated Content: {updatedContent}</pre>
+            <pre>Image Prompts: {imagePrompts.map((prompt)=> `${prompt.id} : ${prompt.prompt}\n`).join("")}</pre>
             <pre>Images: {images}</pre>
           </div>
           <div className="mt-4">

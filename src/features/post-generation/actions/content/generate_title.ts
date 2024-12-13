@@ -3,7 +3,7 @@
 import { title } from "node:process";
 import { TitleResponse, KeywordObj, Persona } from "../../types";
 import { fetchBlogTitles } from "../../utils/naver";
-import { titlePrompt } from "../../prompts/content/titlePrompt";
+import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
 
 export async function generateTitle(
@@ -44,6 +44,10 @@ export async function generateTitle(
   const subkeywords=response.selected_subkeywords
   
   // 응답 데이터
+  console.log("generateTitle 응답 데이터",JSON.stringify({
+    subkeywords: subkeywords,
+    title: title
+  }))
   return {
     subkeywords: subkeywords,
     title: title

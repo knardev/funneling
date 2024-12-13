@@ -2,9 +2,11 @@ import { PlaygroundPanel } from "@/features/post-generation/components/playgroun
 
 export default function Page() {
   return (
-    <div className="h-full flex flex-col">
-      <h1>플레이그라운드</h1>
-      <PlaygroundPanel />
+    <div className="h-screen flex flex-col">
+      <h1 className="sticky top-0 bg-white z-10 p-4 shadow-md">플레이그라운드</h1>
+      <div className="flex-1 overflow-y-auto">
+        <PlaygroundPanel />
+      </div>
     </div>
   );
 }

@@ -17,24 +17,23 @@ export async function initializeContent(
   if (!keyword) {
     throw new Error('키워드는 필수 데이터입니다.');
   }
-
-  // 서비스 분석 데이터 생성
-const serviceAnalysis: Analysis = persona ? await analyzeService(persona) : {
-  industry_analysis: "",
-  advantage_analysis: "",
-  target_needs: "",
-  marketing_points: ""
-};
-
-
   // 검색 데이터 생성
   const subkeywordlist:string[] = await getSearchData(keyword);
 
-  // 응답 데이터
-  return {
-      service_analysis: serviceAnalysis,
-      subkeywordlist: subkeywordlist
+  const response:{
+    service_analysis?: Analysis;
+    subkeywordlist: string[];
+  }={
+    subkeywordlist: subkeywordlist
   };
+  
+  if(persona){
+    const serviceAnalysis:Analysis=await analyzeService(persona);
+    response.service_analysis=serviceAnalysis;
+  }
+console.log("initializeContent 응답 데이터",JSON.stringify(response))
+  // 응답 데이터
+  return response;
 }
 
 
@@ -164,6 +163,7 @@ async function analyzeService(persona: Persona ):Promise<Analysis> {
       apiResponse: response.apiResponse
     })
   );
+
 
   const analysisresult=extractJsonFromResponse(analysis)
 

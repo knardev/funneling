@@ -2,7 +2,7 @@
 
 import { Analysis, KeywordObj} from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
-import { introPrompt } from "../../prompts/content/introPrompt";
+import { introPrompt } from "../../prompts/contentPrompt/introPrompt";
 
 export async function generateIntro(
     keyword: KeywordObj,
@@ -10,10 +10,6 @@ export async function generateIntro(
     toc:string,
     analysis?: Analysis,
 ) {
-  console.log("keyword",keyword.keyword);
-  console.log("subkeywords",keyword.subkeywords);
-  console.log("title",title);
-  console.log("toc",toc);
 
   const response= await makeClaudeRequest<{
     optimized_intro:string
@@ -28,6 +24,7 @@ export async function generateIntro(
   )
   const intro=response.optimized_intro
   // 응답 데이터
+  console.log("generateIntro 응답 데이터",JSON.stringify(response))
   return {
     intro:intro
   };

@@ -2,7 +2,7 @@
 
 import { Analysis, KeywordObj } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
-import { conclusionPrompt } from "../../prompts/content/conclusionprompt";  
+import { conclusionPrompt } from "../../prompts/contentPrompt/conclusionprompt";  
 
 
 export async function generateConclusion(
@@ -13,7 +13,6 @@ export async function generateConclusion(
     body:string,
     analysis?: Analysis
 ) {
-    console.log("body",body)
     const response=await makeClaudeRequest<{
         optimized_conclusion:string
     }>(
@@ -30,6 +29,7 @@ export async function generateConclusion(
     )
     const conclusion=await response.optimized_conclusion
   // 응답 데이터
+  console.log("generateConclusion 응답 데이터",JSON.stringify(response))
   return {
     conclusion:conclusion
   };
