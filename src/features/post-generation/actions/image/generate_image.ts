@@ -1,20 +1,15 @@
 "use server";
 import { makeReplicateRequest } from "../../utils/ai/replictae";
+import { ImagePrompts, GeneratedImage } from "../../types";
 
-interface ImagePrompt {
-    id: string;
-    prompt: string;
-}
 
-interface GeneratedImage {
-    id: string;
-    imageUrl: string;
-}
 
 export async function generateImage(
-    imagePrompts: ImagePrompt[] | ImagePrompt
+    imagePrompts: ImagePrompts[]
 ): Promise<{ images: GeneratedImage[] }> {
     // imagePrompts가 배열이 아닌 경우 배열로 변환
+    console.log("start generateImage");
+    console.log("Received image prompts:", imagePrompts);
     const promptsArray = Array.isArray(imagePrompts) ? imagePrompts : [imagePrompts];
     
     if (promptsArray.length === 0) {
@@ -24,16 +19,16 @@ export async function generateImage(
     const images = await Promise.all(
         promptsArray.map(async (item) => {
             try {
-                const response = await makeReplicateRequest(
+                const imageUrl = await makeReplicateRequest(
                     item.id,
                     item.prompt
                 );
-                console.log(response);
+                console.log("Replicate imageUrl",imageUrl);
                 
-                if (response.urls.get) {
+                if (imageUrl) {
                     return {
                         id: item.id,
-                        imageUrl: response.urls.get,
+                        imageUrl: imageUrl,
                     };
                 }
                 console.warn(`ID: ${item.id} - 결과가 없습니다.`);

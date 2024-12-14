@@ -46,7 +46,7 @@ export function PlaygroundPanel() {
   const [conclusion, setConclusion] = useState("");
   const [updatedContent, setUpdatedContent] = useState("");
   const [imagePrompts, setImagePrompts] = useState<{id:string,prompt:string}[]>([]);
-  const [images, setImages] = useState("");
+  const [images, setImages] = useState<{id:string,imageUrl:string}[]>([]);
 
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -59,7 +59,7 @@ export function PlaygroundPanel() {
 
   const keywordObj = {
     keyword,
-    subkeywords: [],
+    subkeywords: subkeywords,
   };
 
   // Utility function to update logs
@@ -146,8 +146,8 @@ export function PlaygroundPanel() {
     const result = await generateImage(
       imagePrompts
     );
-    setImages(result.images.map((image)=>image.imageUrl).join("\n"));
-    updateLog(`Images generated: ${JSON.stringify(result)}`);
+    setImages(result.images);
+    updateLog(`Images generated: ${JSON.stringify(result.images)}`);
   };
 
   // Run all steps in sequence
@@ -185,7 +185,7 @@ export function PlaygroundPanel() {
     setConclusion("");
     setUpdatedContent("");
     setImagePrompts([]);
-    setImages("");
+    setImages([]);
     setDebugLogs([]);
     updateLog("States reset.");
   };
@@ -273,7 +273,7 @@ export function PlaygroundPanel() {
             <pre>Conclusion: {conclusion}</pre>
             <pre>Updated Content: {updatedContent}</pre>
             <pre>Image Prompts: {imagePrompts.map((prompt)=> `${prompt.id} : ${prompt.prompt}\n`).join("")}</pre>
-            <pre>Images: {images}</pre>
+            <pre>Images: {images.map((image)=> `${image.id} : ${image.imageUrl}\n`).join("")}</pre>
           </div>
           <div className="mt-4">
             <h3>Execution Logs:</h3>

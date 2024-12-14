@@ -40,6 +40,7 @@ export interface PredictionInput {
 }
 // 예측 응답 인터페이스
 export interface PredictionResponse {
+  output: string[];
   uuid: string;
   status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
   urls: {
@@ -48,6 +49,16 @@ export interface PredictionResponse {
   error?: {
     message: string;
   };
+}
+
+export interface ImagePrompts {
+  id: string;
+  prompt: string;
+}
+
+export interface GeneratedImage {
+  id: string;
+  imageUrl: string;
 }
 
 export * from './types';
