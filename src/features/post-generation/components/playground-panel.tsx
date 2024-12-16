@@ -26,7 +26,7 @@ import { saveFinalResult } from "../actions/save_finalResult";
 
 export function PlaygroundPanel() {
   // Input states
-  const [keyword, setKeyword] = useState("");
+  const [mainkeyword, setMainKeyword] = useState("");
   const [subkeywords, setSubKeywords] = useState<string[]>([]);
   const [personaServiceName, setPersonaServiceName] = useState("");
   const [serviceType, setServiceType] = useState("");
@@ -57,14 +57,10 @@ export function PlaygroundPanel() {
     service_advantage: serviceAdvantages,
   };
 
-  const keywordObj = {
-    keyword,
-    subkeywords: subkeywords,
-  };
 
   const content = {
     title,
-    toc,
+    toc : [toc],
     intro,
     body,
     conclusion
@@ -82,17 +78,18 @@ export function PlaygroundPanel() {
   const handleInitializeContent = async () => {
     updateLog("Initializing content...");
     const hasAllPersonaData=personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim()
-    const result = await initializeContent(keyword, hasAllPersonaData ? persona : undefined);
-    if (result.service_analysis) {
-      setServiceAnalysis(result.service_analysis);
+    const result = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
+    if (result.serviceanalysis) {
+      setServiceAnalysis(result.serviceanalysis);
     }
     setSubKeywordlist(result.subkeywordlist);
     updateLog(`Content initialized: ${JSON.stringify(result)}`);
   };
 
+// subkeywordlist 중 subkeywords 선택
   const handleGenerateTitle = async () => {
     updateLog("Generating title...");
-    const result = await generateTitle(keywordObj, persona);
+    const result = await generateTitle(mainkeyword,subkeywordlist, serviceAnalysis);
     setTitle(result.title);
     setSubKeywords(result.subkeywords);
     updateLog(`Title generated: ${JSON.stringify(result)}`);
@@ -100,21 +97,21 @@ export function PlaygroundPanel() {
 
   const handleGenerateToc = async () => {
     updateLog("Generating TOC...");
-    const result = await generateToc(keywordObj, title, serviceAnalysis);
+    const result = await generateToc(mainkeyword,subkeywords, title, serviceAnalysis);
     setToc(result.toc);
     updateLog(`TOC generated: ${JSON.stringify(result)}`);
   };
 
   const handleGenerateIntro = async () => {
     updateLog("Generating intro...");
-    const result = await generateIntro(keywordObj, title, toc, serviceAnalysis);
+    const result = await generateIntro(mainkeyword,subkeywords, title, toc, serviceAnalysis);
     setIntro(result.intro);
     updateLog(`Intro generated: ${JSON.stringify(result)}`);
   };
 
   const handleGenerateBody = async () => {
     updateLog("Generating body...");
-    const result = await generateBody(keywordObj, title, toc, intro, serviceAnalysis);
+    const result = await generateBody(mainkeyword,subkeywords, title, toc, intro, serviceAnalysis);
     setBody(result.body);
     updateLog(`Body generated: ${JSON.stringify(result)}`);
   };
@@ -122,7 +119,8 @@ export function PlaygroundPanel() {
   const handleGenerateConclusion = async () => {
     updateLog("Generating conclusion...");
     const result = await generateConclusion(
-      keywordObj,
+      mainkeyword,
+      subkeywords,
       title,
       toc,
       intro,
@@ -137,7 +135,7 @@ export function PlaygroundPanel() {
     updateLog("Generating image prompts...");
     const result = await generateImagePrompt({
       title,
-      toc,
+      toc : [toc],
       intro,
       body,
       conclusion,
@@ -162,7 +160,10 @@ export function PlaygroundPanel() {
     try{
     updateLog("Saving final result...");
     const finalResult:FinalResult={
-      keywords:keywordObj,
+      keywords:{
+        mainKeyword:mainkeyword,
+        subkeywords:subkeywords
+      },
       persona,
       service_analysis:serviceAnalysis,
       content,
@@ -186,16 +187,17 @@ export function PlaygroundPanel() {
       // Initialize Content
       updateLog("Initializing content...");
       const hasAllPersonaData = personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
-      const initResult = await initializeContent(keyword, hasAllPersonaData ? persona : undefined);
+      const initResult = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
       updateLog(`Content initialized: ${JSON.stringify(initResult)}`);
-      setServiceAnalysis(initResult.service_analysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
+      setServiceAnalysis(initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
       setSubKeywordlist(initResult.subkeywordlist);
       
       // Generate Title
       updateLog("Generating title...");
       const titleResult = await generateTitle(
-        { keyword, subkeywords: initResult.subkeywordlist || [] },
-        persona
+        mainkeyword,
+        initResult.subkeywordlist,
+        initResult.serviceanalysis
       );
       setTitle(titleResult.title);
       setSubKeywords(titleResult.subkeywords);
@@ -204,9 +206,10 @@ export function PlaygroundPanel() {
       // Generate TOC
       updateLog("Generating TOC...");
       const tocResult = await generateToc(
-        { keyword, subkeywords: titleResult.subkeywords },
+        mainkeyword,
+        titleResult.subkeywords,
         titleResult.title,
-        initResult.service_analysis
+        initResult.serviceanalysis
       );
       setToc(tocResult.toc);
       updateLog(`TOC generated: ${JSON.stringify(tocResult)}`);
@@ -214,10 +217,11 @@ export function PlaygroundPanel() {
       // Generate Intro
       updateLog("Generating intro...");
       const introResult = await generateIntro(
-        { keyword, subkeywords: titleResult.subkeywords },
+        mainkeyword,
+        subkeywords,
         titleResult.title,
         tocResult.toc,
-        initResult.service_analysis
+        initResult.serviceanalysis
       );
       setIntro(introResult.intro);
       updateLog(`Intro generated: ${JSON.stringify(introResult)}`);
@@ -225,11 +229,12 @@ export function PlaygroundPanel() {
       // Generate Body
       updateLog("Generating body...");
       const bodyResult = await generateBody(
-        { keyword, subkeywords: titleResult.subkeywords },
+        mainkeyword,
+        subkeywords,
         titleResult.title,
         tocResult.toc,
         introResult.intro,
-        initResult.service_analysis
+        initResult.serviceanalysis
       );
       setBody(bodyResult.body);
       updateLog(`Body generated: ${JSON.stringify(bodyResult)}`);
@@ -237,12 +242,13 @@ export function PlaygroundPanel() {
       // Generate Conclusion
       updateLog("Generating conclusion...");
       const conclusionResult = await generateConclusion(
-        { keyword, subkeywords: titleResult.subkeywords },
+        mainkeyword,
+        subkeywords,
         titleResult.title,
         tocResult.toc,
         introResult.intro,
         bodyResult.body,
-        initResult.service_analysis
+        initResult.serviceanalysis
       );
       setConclusion(conclusionResult.conclusion);
       updateLog(`Conclusion generated: ${JSON.stringify(conclusionResult)}`);
@@ -252,12 +258,12 @@ export function PlaygroundPanel() {
       const imagePromptResult = await generateImagePrompt(
         {
           title: titleResult.title,
-          toc: tocResult.toc,
+          toc: [tocResult.toc],
           intro: introResult.intro,
           body: bodyResult.body,
           conclusion: conclusionResult.conclusion,
         },
-        initResult.service_analysis
+        initResult.serviceanalysis
       );
       setUpdatedContent(imagePromptResult.updatedContent || "");
       setImagePrompts(imagePromptResult.imagePrompts);
@@ -272,12 +278,15 @@ export function PlaygroundPanel() {
       // Save Final Result
       updateLog("Saving final result...");
       const finalResult: FinalResult = {
-        keywords: { keyword, subkeywords: titleResult.subkeywords },
+        keywords:{
+          mainKeyword:mainkeyword,
+          subkeywords:subkeywords
+        },
         persona,
-        service_analysis: initResult.service_analysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
+        service_analysis: initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
         content: {
           title: titleResult.title,
-          toc: tocResult.toc,
+          toc: [tocResult.toc],
           intro: introResult.intro,
           body: bodyResult.body,
           conclusion: conclusionResult.conclusion,
@@ -299,7 +308,7 @@ export function PlaygroundPanel() {
 
   // Reset all states
   const handleResetStates = () => {
-    setKeyword("");
+    setMainKeyword("");
     setSubKeywords([]);
     setPersonaServiceName("");
     setServiceType("");
@@ -332,8 +341,8 @@ export function PlaygroundPanel() {
               <Label>Keyword</Label>
               <Input
                 placeholder="Enter keyword"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
+                value={mainkeyword}
+                onChange={(e) => setMainKeyword(e.target.value)}
               />
             </div>
             <div>
@@ -393,7 +402,7 @@ export function PlaygroundPanel() {
         >
           <h2>Debug Panel</h2>
           <div className="mt-4 space-y-2 text-sm">
-            <pre>Keyword: {keyword}</pre>
+            <pre>Keyword: {mainkeyword}</pre>
             <pre>Persona Service Name: {personaServiceName}</pre>
             <pre>Service Type: {serviceType}</pre>
             <pre>Service Advantages: {serviceAdvantages}</pre>

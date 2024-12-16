@@ -6,7 +6,8 @@ import { conclusionPrompt } from "../../prompts/contentPrompt/conclusionprompt";
 
 
 export async function generateConclusion(
-    keyword: KeywordObj,
+    mainkeyword: string,
+    subkeywords: string[],
     title: string,
     toc:string,
     intro:string,
@@ -17,8 +18,8 @@ export async function generateConclusion(
         optimized_conclusion:string
     }>(
         conclusionPrompt.generatePrompt(
-            keyword.keyword,
-            keyword.subkeywords,
+            mainkeyword,
+            subkeywords,
             title,
             toc,
             intro,

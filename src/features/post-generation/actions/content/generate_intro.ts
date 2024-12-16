@@ -5,7 +5,8 @@ import { makeClaudeRequest } from "../../utils/ai/claude";
 import { introPrompt } from "../../prompts/contentPrompt/introPrompt";
 
 export async function generateIntro(
-    keyword: KeywordObj,
+    mainkeyword: string,
+    subkeywords: string[],
     title: string,
     toc:string,
     analysis?: Analysis,
@@ -15,10 +16,11 @@ export async function generateIntro(
     optimized_intro:string
   }>(
     introPrompt.generatePrompt(
-      keyword.keyword,
-      keyword.subkeywords,
+      mainkeyword,
+      subkeywords,
       title,
-      toc
+      toc,
+      analysis
     ),
     introPrompt.system,
   )

@@ -1,5 +1,5 @@
 export interface KeywordObj {
-    keyword: string;
+    mainKeyword: string;
     subkeywords: string[];
   }
   
@@ -16,7 +16,7 @@ export interface KeywordObj {
 
 export interface Content {
     title: string;
-    toc: string;
+    toc: string[];
     intro: string;
     body: string;
     conclusion: string;
@@ -65,6 +65,7 @@ export interface FinalResult {
   persona: Persona;
   service_analysis: Analysis;
   content: Content;
+  imagePrompts: ImagePrompts[];
   images: GeneratedImage[];
   updatedContent: string;
 }

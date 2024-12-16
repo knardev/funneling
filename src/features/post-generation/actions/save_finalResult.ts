@@ -14,12 +14,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export async function saveFinalResult(
   finalResult: FinalResult
 ) {
+  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  
+  const subkeywordsString = finalResult.keywords.subkeywords.join(',');
+  const tocString = finalResult.content.toc.join(',');
+
   try {
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-    
-    const insertData: Database['public']['Tables']['post_generations']['Insert'] = {
-      keyword: finalResult.keywords.keyword,
-      sub_keywrod: JSON.stringify(finalResult.keywords.subkeywords), // Note: matches the typo in the schema
+    // 1. post_generations 테이블에 데이터 삽입
+    const postGenerationData: Database['public']['Tables']['post_generations']['Insert'] = {
+      keyword: finalResult.keywords.mainKeyword,
+      sub_keywrod: subkeywordsString,
       service_name: finalResult.persona.service_name || null,
       service_industry: finalResult.persona.service_industry || null,
       service_advantage: finalResult.persona.service_advantage || null,
@@ -27,29 +31,61 @@ export async function saveFinalResult(
       advantage_analysis: finalResult.service_analysis.advantage_analysis || null,
       target_needs: finalResult.service_analysis.target_needs || null,
       title: finalResult.content.title,
-      toc: Array.isArray(finalResult.content.toc) 
-        ? JSON.stringify(finalResult.content.toc) 
-        : finalResult.content.toc,
+      toc: tocString,
       intro: finalResult.content.intro,
       body: finalResult.content.body,
       conclusion: finalResult.content.conclusion,
-      image_prompts: JSON.stringify(finalResult.imagePrompts),
-      images: JSON.stringify(finalResult.images),
       updated_content: finalResult.updatedContent,
     };
 
-    const { data, error } = await supabase
+    const { data: postData, error: postError } = await supabase
       .from('post_generations')
-      .insert(insertData)
+      .insert(postGenerationData)
       .select();
 
-    
-    if (error) {
-      console.error("Supabase error:", error);
-      throw error;
+    if (postError) {
+      console.error("Supabase post_generations insert error:", postError);
+      throw postError;
     }
 
-    return data;
+    const postGeneration = postData[0];
+    const postGenerationId = postGeneration.id; // UUID
+
+    // 2. images 테이블에 데이터 삽입 준비
+    const imagePrompts = finalResult.imagePrompts; // [{id: string, prompt: string}, ...]
+    const images = finalResult.images; // [{id: string, imageUrl: string}, ...]
+
+    // imagePrompts와 images를 id로 매칭
+    const imagesToInsert = imagePrompts.map(prompt => {
+      const correspondingImage = images.find(img => img.id === prompt.id);
+      if (!correspondingImage) {
+        throw new Error(`Image URL not found for image_id ${prompt.id}`);
+      }
+      return {
+        post_generations_id: postGenerationId,
+        image_id: parseInt(prompt.id), // image_id를 정수로 변환
+        prompt: prompt.prompt,
+        image_url: correspondingImage.imageUrl,
+      };
+    });
+
+    // 3. images 테이블에 데이터 삽입
+    const { data: imagesData, error: imagesError } = await supabase
+      .from('images')
+      .insert(imagesToInsert)
+      .select();
+
+    if (imagesError) {
+      console.error("Supabase images insert error:", imagesError);
+      throw imagesError;
+    }
+    console.log("All data inserted successfully:");
+    // 4. 결과 반환 (선택 사항)
+    return {
+      postGeneration,
+      images: imagesData,
+    };
+    
   } catch (error) {
     console.error("Error in saveFinalResult:", error);
     throw error;

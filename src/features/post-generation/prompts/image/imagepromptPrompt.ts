@@ -47,7 +47,7 @@ export const imagepromptPrompt = {
     
     ### Example Output:
     {
-      "updatedContent": "{enhanced allcontent with image prompts inserted}",
+      "updatedContent": "{JUST RETURN THE ENHANCED CONTENT WITH IMAGE PROMPTS INSERTED}",
 
       "image_prompts": {
           "1": "A serene sunrise over a mountain range, wide-angle composition, soft natural lighting, peaceful and calm atmosphere, professional editorial photography, high-resolution details, Korea",

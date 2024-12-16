@@ -3,6 +3,7 @@
 
 // 첫 번째 fetch 함수: 네이버 블로그 검색결과에서 제목 영역의 텍스트를 추출
 export async function fetchBlogTitles(keyword: string) {
+  console.log("들어온 keyword",keyword)
     const url = `https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=${encodeURIComponent(keyword)}`;
     const options = {
         method: 'GET',

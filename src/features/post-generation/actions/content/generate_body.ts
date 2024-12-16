@@ -4,7 +4,8 @@ import { makeClaudeRequest } from "../../utils/ai/claude";
 import { bodyPrompt } from "../../prompts/contentPrompt/bodyPrompt";
 
 export async function generateBody(
-  keyword: KeywordObj,
+  mainkeyword: string,
+  subkeywords: string[],
   title: string,
   toc:string,
   intro:string,
@@ -15,8 +16,8 @@ export async function generateBody(
         optimized_body:string
     }>(
         bodyPrompt.generatePrompt(
-            keyword.keyword,
-            keyword.subkeywords,
+            mainkeyword,
+            subkeywords,
             title,
             toc,
             intro,

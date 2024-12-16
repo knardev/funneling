@@ -6,20 +6,23 @@ import { makeClaudeRequest } from "../../utils/ai/claude";
 
 
 export async function generateToc(
-  keyword: KeywordObj,
+  mainkeyword: string,
+  subkeywords: string[],
   title: string,
   analysis?: Analysis
 )
 {
-console.log(keyword)
+console.log(mainkeyword)
+console.log(subkeywords)
 console.log(title)
   const response= await makeClaudeRequest<{
     toc:string
   }>(
     tocPrompt.generatePrompt(
-      keyword.keyword,
-      keyword.subkeywords,    
-      title
+      mainkeyword,
+      subkeywords,    
+      title,
+      analysis
     ),
     tocPrompt.system
   )

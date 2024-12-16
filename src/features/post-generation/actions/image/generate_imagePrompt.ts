@@ -27,7 +27,7 @@ export async function generateImagePrompt(
     }))
     const updatedContent=response.updatedContent
 
-    console.log("generateImagePrompt 응답 데이터",response)
+    console.log("generateImagePrompt 응답 데이터",promptArray)
   // 응답 데이터
   return {
     updatedContent:updatedContent,
