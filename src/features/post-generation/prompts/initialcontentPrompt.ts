@@ -79,8 +79,7 @@ export const initialContentPrompt = {
         "problem_solving_needs": ["명시된 문제해결1", "명시된 문제해결2", "명시된 문제해결3"],
         "emotional_needs": ["확인된 감성니즈1", "확인된 감성니즈2", "확인된 감성니즈3"],
         "priority_needs": ["핵심니즈1", "핵심니즈2", "핵심니즈3"]
-    },
-    "marketing_points": ["입증가능 포인트1", "입증가능 포인트2", "입증가능 포인트3"]
+    }
     }
 
     ※ 분석 시 필수 준수사항:

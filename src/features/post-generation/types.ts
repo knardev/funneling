@@ -12,7 +12,6 @@ export interface KeywordObj {
     industry_analysis: string | null;
     advantage_analysis: string | null;
     target_needs: string | null;
-    marketing_points: string | null;
   }
 
 export interface Content {
@@ -60,5 +59,15 @@ export interface GeneratedImage {
   id: string;
   imageUrl: string;
 }
+
+export interface FinalResult {
+  keywords: KeywordObj;
+  persona: Persona;
+  service_analysis: Analysis;
+  content: Content;
+  images: GeneratedImage[];
+  updatedContent: string;
+}
+
 
 export * from './types';

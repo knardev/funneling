@@ -31,9 +31,9 @@ export const imagepromptPrompt = {
        - Use the numbering format: #[1], #[2], #[3], etc.
 
     4. **Readability Formatting**:
-       - After each paragraph, insert 3 line breaks (\n\n\n)
-       - Within each paragraph, group every 3-4 sentences and then insert a line break (\n)
-       - Limit each paragraph to a maximum of 4 such groups
+       - After each paragraph, add three empty lines
+       - Within each paragraph, after every 3-4 sentences add a single empty line
+       - Limit each paragraph to a maximum of 4 groups of sentences
        - Apply this formatting consistently throughout the entire content
     
     5. **Output Format**:

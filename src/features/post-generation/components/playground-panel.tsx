@@ -21,7 +21,8 @@ import { generateConclusion } from "@/features/post-generation/actions/content/g
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 
-import { Analysis } from "../types";
+import { Analysis, FinalResult } from "../types";
+import { saveFinalResult } from "../actions/save_finalResult";
 
 export function PlaygroundPanel() {
   // Input states
@@ -35,8 +36,7 @@ export function PlaygroundPanel() {
   const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
     industry_analysis: null,
     advantage_analysis: null,
-    target_needs: null,
-    marketing_points: null,
+    target_needs: null
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [title, setTitle] = useState("");
@@ -60,6 +60,14 @@ export function PlaygroundPanel() {
   const keywordObj = {
     keyword,
     subkeywords: subkeywords,
+  };
+
+  const content = {
+    title,
+    toc,
+    intro,
+    body,
+    conclusion
   };
 
   // Utility function to update logs
@@ -149,19 +157,144 @@ export function PlaygroundPanel() {
     setImages(result.images);
     updateLog(`Images generated: ${JSON.stringify(result.images)}`);
   };
+  
+  const handleSaveFinalResult = async () => {
+    try{
+    updateLog("Saving final result...");
+    const finalResult:FinalResult={
+      keywords:keywordObj,
+      persona,
+      service_analysis:serviceAnalysis,
+      content,
+      imagePrompts,
+      images,
+      updatedContent
+    }
+    const result = await saveFinalResult(finalResult);
+    updateLog(`Final result saved: ${JSON.stringify(result)}`);
+    }catch(error){
+      updateLog(`Error saving final result: ${error}`);
+      console.error("Error saving final result:", error);
+    }
+  };
 
   // Run all steps in sequence
   const handleRunAll = async () => {
     updateLog("Running all steps...");
-    await handleInitializeContent();
-    await handleGenerateTitle();
-    await handleGenerateToc();
-    await handleGenerateIntro();
-    await handleGenerateBody();
-    await handleGenerateConclusion();
-    await handleGenerateImagePrompt();
-    await handleGenerateImages();
-    updateLog("All steps completed.");
+    
+    try {
+      // Initialize Content
+      updateLog("Initializing content...");
+      const hasAllPersonaData = personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
+      const initResult = await initializeContent(keyword, hasAllPersonaData ? persona : undefined);
+      updateLog(`Content initialized: ${JSON.stringify(initResult)}`);
+      setServiceAnalysis(initResult.service_analysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
+      setSubKeywordlist(initResult.subkeywordlist);
+      
+      // Generate Title
+      updateLog("Generating title...");
+      const titleResult = await generateTitle(
+        { keyword, subkeywords: initResult.subkeywordlist || [] },
+        persona
+      );
+      setTitle(titleResult.title);
+      setSubKeywords(titleResult.subkeywords);
+      updateLog(`Title generated: ${JSON.stringify(titleResult)}`);
+      
+      // Generate TOC
+      updateLog("Generating TOC...");
+      const tocResult = await generateToc(
+        { keyword, subkeywords: titleResult.subkeywords },
+        titleResult.title,
+        initResult.service_analysis
+      );
+      setToc(tocResult.toc);
+      updateLog(`TOC generated: ${JSON.stringify(tocResult)}`);
+      
+      // Generate Intro
+      updateLog("Generating intro...");
+      const introResult = await generateIntro(
+        { keyword, subkeywords: titleResult.subkeywords },
+        titleResult.title,
+        tocResult.toc,
+        initResult.service_analysis
+      );
+      setIntro(introResult.intro);
+      updateLog(`Intro generated: ${JSON.stringify(introResult)}`);
+      
+      // Generate Body
+      updateLog("Generating body...");
+      const bodyResult = await generateBody(
+        { keyword, subkeywords: titleResult.subkeywords },
+        titleResult.title,
+        tocResult.toc,
+        introResult.intro,
+        initResult.service_analysis
+      );
+      setBody(bodyResult.body);
+      updateLog(`Body generated: ${JSON.stringify(bodyResult)}`);
+      
+      // Generate Conclusion
+      updateLog("Generating conclusion...");
+      const conclusionResult = await generateConclusion(
+        { keyword, subkeywords: titleResult.subkeywords },
+        titleResult.title,
+        tocResult.toc,
+        introResult.intro,
+        bodyResult.body,
+        initResult.service_analysis
+      );
+      setConclusion(conclusionResult.conclusion);
+      updateLog(`Conclusion generated: ${JSON.stringify(conclusionResult)}`);
+      
+      // Generate Image Prompt
+      updateLog("Generating image prompts...");
+      const imagePromptResult = await generateImagePrompt(
+        {
+          title: titleResult.title,
+          toc: tocResult.toc,
+          intro: introResult.intro,
+          body: bodyResult.body,
+          conclusion: conclusionResult.conclusion,
+        },
+        initResult.service_analysis
+      );
+      setUpdatedContent(imagePromptResult.updatedContent || "");
+      setImagePrompts(imagePromptResult.imagePrompts);
+      updateLog(`Image prompts generated: ${JSON.stringify(imagePromptResult.imagePrompts)}`);
+      
+      // Generate Images
+      updateLog("Generating images...");
+      const imagesResult = await generateImage(imagePromptResult.imagePrompts);
+      setImages(imagesResult.images);
+      updateLog(`Images generated: ${JSON.stringify(imagesResult.images)}`);
+      
+      // Save Final Result
+      updateLog("Saving final result...");
+      const finalResult: FinalResult = {
+        keywords: { keyword, subkeywords: titleResult.subkeywords },
+        persona,
+        service_analysis: initResult.service_analysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
+        content: {
+          title: titleResult.title,
+          toc: tocResult.toc,
+          intro: introResult.intro,
+          body: bodyResult.body,
+          conclusion: conclusionResult.conclusion,
+        },
+        imagePrompts: imagePromptResult.imagePrompts,
+        images: imagesResult.images,
+        updatedContent: imagePromptResult.updatedContent || "",
+      };
+      const saveResult = await saveFinalResult(finalResult);
+      updateLog(`Final result saved: ${JSON.stringify(saveResult)}`);
+      
+      updateLog("All steps completed.");
+      console.log("All steps completed.");
+    } catch (error) {
+      updateLog(`Error during run all steps: ${error}`);
+      console.error("Error during run all steps:", error);
+    }
   };
 
   // Reset all states
@@ -175,8 +308,7 @@ export function PlaygroundPanel() {
     setServiceAnalysis({
       industry_analysis: null,
       advantage_analysis: null,
-      target_needs: null,
-      marketing_points: null,
+      target_needs: null
     });
     setTitle("");
     setToc("");
@@ -243,6 +375,7 @@ export function PlaygroundPanel() {
                 Generate Image Prompt
               </Button>
               <Button onClick={handleGenerateImages}>Generate Images</Button>
+              <Button onClick={handleSaveFinalResult}>Save Final Result</Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-4">
               <Button onClick={handleRunAll}>Run All Steps</Button>
