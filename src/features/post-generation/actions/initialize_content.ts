@@ -1,7 +1,7 @@
 "use server";
 
 import {naverUtils} from "../utils/naver";
-import { Analysis, ApiResponse, Persona } from "../types";
+import { Analysis, Persona } from "../types";
 import { makeClaudeRequest } from "../utils/ai/claude";
 import { initialContentPrompt } from "../prompts/initialcontentPrompt";
 
@@ -91,8 +91,8 @@ async function getSearchData(keyword: string) {
   }
 
   const relatedTerms = processRelatedTerms(html1);
-  const autocompleteTerms = processAutocomplete(keyword);
-  const subkeywords = relatedTerms.concat(await autocompleteTerms);
+  const autocompleteTerms = await processAutocomplete(keyword);
+  const subkeywords = Array.from(new Set(relatedTerms.concat(autocompleteTerms)));
 
   return subkeywords;
 }

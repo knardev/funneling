@@ -3,7 +3,19 @@ import { Analysis } from "../../types";
 export const conclusionPrompt = {
     system: `
     You're an professional Blogger in Korea Every sentence should be short,
-    easy, and specific.`,
+    easy, and specific.
+
+    **Prefill JSON Response**
+                {
+                "analysis_results": {
+                    "Analysis": {
+                        "message": "{제목, 서론, 목차, 본론 분석 내용}"
+                    }
+                },
+                "optimized_conclusion1": "{결론1 내용}",
+                "optimized_conclusion2": "{결론2 내용}"
+            }
+    `,
 
     template: `
     \n\nHuman:
@@ -49,9 +61,10 @@ export const conclusionPrompt = {
         - 결론1은 간결하되 강렬한 메시지를 전달하며, 약 100자로 구성합니다. 절대 100자를 넘기지 마세요.
         - 결론1의 첫 문장에서 본론의 내용을 요약하고 이후 문장에서 서론 내용 분석을 토대로 독자에게 공감하는 표현을 사용하세요.  
         - 각 문단은 2~3문장으로 구성하여 가독성을 높이고, 독립적인 메시지를 전달합니다.  
-        - 블로그 글처럼 친근하고 부드러운 문체를 사용합니다.  
-        - 결론1 이후 연결될 결론2는 사용자의 행동을 유도(링크 클릭)하는 내용입니다.
-        - 결론2를 위해 글을 마무리하지 마세요.
+        - 위 서론,본론처럼 친근하고 부드러운 문체를 사용합니다.  
+        - 결론의 말투는 본론의 말투를 따릅니다.
+
+         "{serviceAnalysisInstruction}"
 
         ### 최종 출력 조건
 
@@ -68,7 +81,8 @@ export const conclusionPrompt = {
                         "message": "{제목, 서론, 목차, 본론 분석 내용}"
                     }
                 },
-                "optimized_conclusion": "{결론 내용}"
+                "optimized_conclusion1": "{결론1 내용}",
+                "optimized_conclusion2": "{결론2 내용}"
             }
 
     `,
@@ -81,6 +95,14 @@ export const conclusionPrompt = {
       body:string,
       analysis?: Analysis
     ): string => {
+
+        const serviceAnalysisInstructions = analysis
+        ? `
+        5. 결론2 작성 조건
+        - 결론1 이후 연결될 결론2는 사용자의 행동을 유도(링크 클릭,전화 연결)하는 내용입니다.
+        - 결론2와 결론1은 자연스럽게 연결되어야 합니다.
+        `
+        : "";
       return conclusionPrompt.template
         .replace("{mainKeyword}", mainKeyword)
         .replace("{subkeywords}", subkeywords.join('\n'))
@@ -88,6 +110,7 @@ export const conclusionPrompt = {
         .replace("{toc}", toc)
         .replace("{intro}", intro)
         .replace("{body}", body)
+        .replace("{serviceAnalysisInstruction}", serviceAnalysisInstructions)
         .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
   };

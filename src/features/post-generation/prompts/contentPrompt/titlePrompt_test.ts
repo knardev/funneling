@@ -1,35 +1,38 @@
 import { Analysis } from "../../types";
 
-export const titlePrompt = {
+export const titlePrompt_test = {
   system: `You are a professional SEO expert who specializes in creating highly effective blog titles that highlight unique business value propositions.
 
     **Prefill JSON Response**
-      {
-        "analysis_results": {
-            "keyword_structure": {
-                "spacing_pattern": "주로 발견되는 띄어쓰기 패턴",
-                "position_pattern": "주로 발견되는 위치",
-                "average_length": {
-                    "syllables": "평균 음절 수",
-                    "characters": "평균 글자 수"
-                }
-            },
-            "common_patterns": ["패턴1", "패턴2", "패턴3"],
-            "keyword_combinations": ["조합1", "조합2", "조합3"]
+    {
+      "analysis_results": {
+        "keyword_structure": {
+          "spacing_pattern": "주로 발견되는 띄어쓰기 패턴",
+          "position_pattern": "주로 발견되는 위치",
+          "average_length": {
+            "syllables": "평균 음절 수",
+            "characters": "평균 글자 수"
+          }
         },
-        "optimized_titles": {
-            "strict_structure": [
-                {"제목": "첫 번째 제목"},
-                {"제목": "두 번째 제목"},
-                {"제목": "세 번째 제목"}
-            ],
-            "creative_structure": [
-                {"제목": "네 번째 제목"},
-                {"제목": "다섯 번째 제목"},
-                {"제목": "여섯 번째 제목"}
-            ]
-        }
-      }`,
+        "common_patterns": ["패턴1", "패턴2", "패턴3"],
+        "keyword_combinations": ["조합1", "조합2", "조합3"]
+      },
+      "selected_subkeywords": ["선택된 서브키워드1", "선택된 서브키워드2"],
+      "optimized_titles": {
+          "strict_structure": [
+              "첫 번째 제목",
+              "두 번째 제목",
+              "세 번째 제목"
+          ],
+          "creative_structure": [
+              "네 번째 제목",
+              "다섯 번째 제목",
+              "여섯 번째 제목"
+          ]
+      }
+
+    }
+`,
 
   template: `### 블로그 제목 최적화 분석 ###
     아래는 '{mainKeyword}' 키워드로 네이버 블로그 상위에 노출된 블로그 제목 예시입니다.
@@ -82,7 +85,7 @@ export const titlePrompt = {
     subkeywords: string[],
     serviceAnalysis?: Analysis
   ): string => {
-    return titlePrompt.template
+    return titlePrompt_test.template
       .replace("{{mainKeyword}}", mainKeyword)
       .replace("{{highImportanceTitles}}", highImportanceTitles.join('\n'))
       .replace("{{lowImportanceTitles}}", lowImportanceTitles.join('\n'))

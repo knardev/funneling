@@ -75,3 +75,36 @@ export const imagepromptPrompt = {
         .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
 };
+
+export const imagepromptPromptSchema = {
+   name: "imagepromptPromptSchema",
+   description: "imagepromptPromptSchema",
+   strict: true,
+   schema: {
+    type: "object",
+    properties: {
+      updatedContent: { 
+        type: "string" 
+      },
+      image_prompts: {
+        type: "object",
+        properties: {
+          "1": { type: "string" },
+          "2": { type: "string" },
+          "3": { type: "string" },
+          "4": { type: "string" },
+          "5": { type: "string" },
+          "6": { type: "string" },
+          "7": { type: "string" },
+          "8": { type: "string" },
+          "9": { type: "string" },
+          "10": { type: "string" }
+        },
+        required: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],  // image_prompts 내부의 required
+        additionalProperties: false
+      }
+    },
+    required: ["updatedContent", "image_prompts"],  // 최상위 레벨의 required
+    additionalProperties: false
+   }
+}

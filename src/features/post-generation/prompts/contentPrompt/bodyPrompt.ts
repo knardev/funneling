@@ -3,7 +3,18 @@ import { Analysis } from "../../types";
 export const bodyPrompt = {
     system: `
     You're an professional Blogger in Korea Every sentence should be short,
-    easy, and specific.`,
+    easy, and specific.
+
+    **Prefill JSON Response**
+            {
+            "analysis_results": {
+                "introandtocAnalysis": {
+                "message": "{서론 및 목차 분석 내용}",
+                "keyElementsForBody": ["{핵심 요소1}", "{핵심 요소2}", "{핵심 요소3}"]
+                }
+            },
+            "optimized_body": "{본론 내용}"
+            }`,
 
     template: `
     \n\nHuman:
@@ -20,6 +31,7 @@ export const bodyPrompt = {
         제목 : "{title}"  
         목차 : "{toc}"  
         서론 : "{intro}"  
+        서비스분석 : "{serviceAnalysis}"
 
         ### 작성 가이드
 
@@ -36,6 +48,8 @@ export const bodyPrompt = {
         - 어려운 개념은 쉬운 예시를 들어 설명해야 합니다.
         - 본론의 말투는 서론의 말투를 따릅니다.
         - 모든 문장은 다음 문장을 읽게 만드는 것에 목적이 있습니다.
+
+        "{serviceAnalysisInstruction}"
 
         본론은 다음 중 하나 또는 조합된 방식으로 작성합니다:  
         - **정보 제공형**: 독자가 찾는 정보를 쉽게 이해할 수 있도록 친절하게 설명합니다.  
@@ -83,12 +97,23 @@ export const bodyPrompt = {
       intro: string,
       analysis?: Analysis
     ): string => {
+      const serviceAnalysisInstructions = analysis
+        ? `
+        - **서비스 분석을 자연스럽게 통합**합니다. 독자의 입장에서 서비스의 장점, 단점, 특징을 설명합니다.
+          - **장점**: 독자가 서비스를 사용할 때 느낄 수 있는 긍정적인 측면을 강조합니다.
+          - **단점**: 서비스의 한계나 개선이 필요한 부분을 솔직하게 제시합니다.
+          - **특징**: 서비스의 독특한 기능이나 차별화된 요소를 설명합니다.
+        - **독자의 경험과 연결**: 서비스 분석을 단순히 나열하는 대신, 독자가 실제로 경험할 수 있는 상황과 연결하여 설명합니다.
+          - 예시: "서비스의 사용자 친화적인 인터페이스는 초보자들에게 큰 장점이 됩니다."
+        `
+        : ""; 
       return bodyPrompt.template
         .replace("{mainKeyword}", mainKeyword)
         .replace("{subkeywords}", subkeywords.join('\n'))
         .replace("{title}", title)
         .replace("{toc}", toc)
         .replace("{intro}", intro)
+        .replace("{serviceAnalysisInstruction}", serviceAnalysisInstructions)
         .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
   };

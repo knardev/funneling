@@ -32,8 +32,12 @@ export async function makeOpenAiRequest<T>(
         role: "user",
         content: prompt
       }
-    ]
+    ],
+    response_format: {
+       type: "json_object",
+    }
   };
+
 
   try {
     const response = await fetch(OPENAI_CONFIG.API.URL, {
@@ -43,7 +47,8 @@ export async function makeOpenAiRequest<T>(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorDetails = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, details: ${errorDetails}`);
     }
 
     const result = await response.json();

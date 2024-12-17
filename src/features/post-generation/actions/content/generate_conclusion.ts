@@ -15,7 +15,8 @@ export async function generateConclusion(
     analysis?: Analysis
 ) {
     const response=await makeClaudeRequest<{
-        optimized_conclusion:string
+        optimized_conclusion1:string,
+        optimized_conclusion2:string
     }>(
         conclusionPrompt.generatePrompt(
             mainkeyword,
@@ -28,7 +29,10 @@ export async function generateConclusion(
         ),
         conclusionPrompt.system
     )
-    const conclusion=await response.optimized_conclusion
+    const conclusion1=await response.optimized_conclusion1
+    const conclusion2=await response.optimized_conclusion2
+
+    const conclusion = conclusion1+conclusion2
   // 응답 데이터
   console.log("generateConclusion 응답 데이터",JSON.stringify(response))
   return {

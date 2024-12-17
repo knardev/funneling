@@ -29,8 +29,8 @@ export interface ApiResponse {
 
 
 export interface TitleResponse {
-  title: string;
-  subkeywords: string[];
+  selected_subkeywords: string[];
+  optimizedTitles: string[]; // 하나의 배열로 변경
 }
 
 export interface PredictionInput {

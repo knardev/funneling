@@ -1,65 +1,95 @@
  "use server";
 
-import { TitleResponse, Analysis } from "../../types";
+import { TitleResponse, Analysis, Persona } from "../../types";
 import { fetchBlogTitles } from "../../utils/naver";
 import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
+import { titlePrompt_test } from "../../prompts/contentPrompt/titlePrompt_test";
 
 export async function generateTitle(
   keyword: string,
   subkeywordlist: string[] | null,
   analysis?: Analysis
-):Promise<TitleResponse> {
-  console.log("keyword",keyword)
-  console.log("subkeywordlist",subkeywordlist)
+): Promise<TitleResponse> {
+  console.log("keyword:", keyword);
+  console.log("subkeywordlist:", subkeywordlist);
 
-  const mainkeyword = keyword
-  console.log("mainkeyword",mainkeyword)
-  const subkeyword = subkeywordlist || []
-  console.log("subkeyword",subkeyword)
+  const mainkeyword = keyword;
+  console.log("mainkeyword:", mainkeyword);
+  const subkeyword = subkeywordlist || [];
+  console.log("subkeyword:", subkeyword);
 
-  const html1 = await fetchBlogTitles(mainkeyword)
-  const extractedText = await extractTextAfterTitleArea(html1)
+  const html1 = await fetchBlogTitles(mainkeyword);
+  const extractedText = await extractTextAfterTitleArea(html1);
 
-  const extratedTitles: string[] = limitTextArray(extractedText)
-  console.log("extratedTitles",extratedTitles)
+  const extratedTitles: string[] = limitTextArray(extractedText);
+  console.log("extractedTitles:", extratedTitles);
 
-  const topKeywords= extractTopKeywords(extratedTitles)
-  console.log("topKeywords",topKeywords)
+  const topKeywords = extractTopKeywords(extratedTitles);
+  console.log("topKeywords:", topKeywords);
 
-  const highImportanceTitles=extratedTitles.slice(0,3)
-  const lowImportanceTitles=extratedTitles.slice(3)
+  const highImportanceTitles = extratedTitles.slice(0, 3);
+  const lowImportanceTitles = extratedTitles.slice(3);
 
-  console.log("subkeyword",subkeyword)
-  const totalSubkeywords=topKeywords.concat(subkeyword)
-  console.log("totalSubkeywords",totalSubkeywords)
+  console.log("subkeyword:", subkeyword);
+  const totalSubkeywords = topKeywords.concat(subkeyword);
+  console.log("totalSubkeywords:", totalSubkeywords);
 
-  const response=await makeOpenAiRequest<{
-    optimized_title:string,
-    selected_subkeywords:string[];
+  console.log("analysis:", analysis);
+  const response = await makeOpenAiRequest<{
+    analysis_results: {
+      keyword_structure: {
+        spacing_pattern: string;
+        position_pattern: string;
+        average_length: {
+          syllables: string;
+          characters: string;
+        };
+      };
+      common_patterns: string[];
+      keyword_combinations: string[];
+    };
+    selected_subkeywords: string[];
+    optimized_titles: {
+      strict_structure: string[];
+      creative_structure: string[];
+    };
   }>(
-    titlePrompt.generatePrompt(
+    titlePrompt_test.generatePrompt(
       mainkeyword,
       highImportanceTitles,
       lowImportanceTitles,
       totalSubkeywords,
       analysis
     ),
-    titlePrompt.system,
-  )
+    titlePrompt_test.system, // 수정된 부분
+  );
+ 
+  console.log("OpenAI 응답:", response);
 
-  const title=response.optimized_title
-  const subkeywords=response.selected_subkeywords
-  console.log("selected_subkeywords는",subkeywords)
-  
+  const optimizedTitles = response.optimized_titles.strict_structure
+  .concat(response.optimized_titles.creative_structure);
+  // 응답 검증
+  if (!response.optimized_titles || !response.selected_subkeywords) {
+    console.error("OpenAI 응답이 예상 형식과 다릅니다:", response);
+    return {
+      selected_subkeywords: [],
+      optimizedTitles: []
+    };
+  }
+
+  const selectedSubkeywords = response.selected_subkeywords;
+  console.log("selected_subkeywords:", selectedSubkeywords);
+
   // 응답 데이터
-  console.log("generateTitle 응답 데이터",JSON.stringify({
-    subkeywords: subkeywords,
-    title: title
-  }))
+  console.log("generateTitle 응답 데이터:", JSON.stringify({
+    selected_subkeywords: selectedSubkeywords,
+    optimized_titles: optimizedTitles
+  }));
+
   return {
-    subkeywords: subkeywords,
-    title: title
+    selected_subkeywords: selectedSubkeywords || [],
+    optimizedTitles: optimizedTitles
   };
 }
 
@@ -82,7 +112,6 @@ function extractTextAfterTitleArea(html: string): string[] {
     matches.push(extractedText.trim());
 
     // 로그를 추가해 순서와 내용 확인
-    console.log(`Index ${index}: ${extractedText.trim()}`);
     index++;
   }
 
