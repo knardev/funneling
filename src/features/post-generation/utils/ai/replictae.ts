@@ -41,7 +41,7 @@ async function makeRequest(
   url: string,
   method: "GET" | "POST",
   headers: Record<string, string>,
-  payload: any = null
+  payload: Record<string, object> | null = null
 ): Promise<PredictionResponse> {
   const options: RequestInit = {
     method,

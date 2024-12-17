@@ -21,7 +21,7 @@ export async function fetchBlogTitles(keyword: string) {
  
         return await response.text();
     } catch (error) {
-        console.error(`Error fetching blog titles for keyword ${keyword}: ${error.message}`);
+        console.error(`Error fetching blog titles for keyword ${keyword}: ${(error as Error).message}`);
         throw error;
     }
  }
@@ -45,7 +45,7 @@ export async function fetchBlogTitles(keyword: string) {
  
         return await response.text();
     } catch (error) {
-        console.error(`Error fetching general search for keyword ${keyword}: ${error.message}`);
+        console.error(`Error fetching general search for keyword ${keyword}: ${(error as Error).message}`);
         throw error;
     }
  }

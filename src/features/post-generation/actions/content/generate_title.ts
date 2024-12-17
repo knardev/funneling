@@ -6,95 +6,101 @@ import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
 import { titlePrompt_test } from "../../prompts/contentPrompt/titlePrompt_test";
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function generateTitle(
   keyword: string,
   subkeywordlist: string[] | null,
   analysis?: Analysis
 ): Promise<TitleResponse> {
-  console.log("keyword:", keyword);
-  console.log("subkeywordlist:", subkeywordlist);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000; // 1초
+  let retryCount = 0;
 
-  const mainkeyword = keyword;
-  console.log("mainkeyword:", mainkeyword);
-  const subkeyword = subkeywordlist || [];
-  console.log("subkeyword:", subkeyword);
+  while (retryCount < MAX_RETRIES) {
+    try {
+      console.log(`시도 ${retryCount + 1}/${MAX_RETRIES}`);
+      
+      const mainkeyword = keyword;
+      const subkeyword = subkeywordlist || [];
 
-  const html1 = await fetchBlogTitles(mainkeyword);
-  const extractedText = await extractTextAfterTitleArea(html1);
+      const html1 = await fetchBlogTitles(mainkeyword);
+      const extractedText = await extractTextAfterTitleArea(html1);
+      const extratedTitles: string[] = limitTextArray(extractedText);
 
-  const extratedTitles: string[] = limitTextArray(extractedText);
-  console.log("extractedTitles:", extratedTitles);
+      const topKeywords = extractTopKeywords(extratedTitles);
+      const highImportanceTitles = extratedTitles.slice(0, 3);
+      const lowImportanceTitles = extratedTitles.slice(3);
 
-  const topKeywords = extractTopKeywords(extratedTitles);
-  console.log("topKeywords:", topKeywords);
+      const totalSubkeywords = topKeywords.concat(subkeyword);
 
-  const highImportanceTitles = extratedTitles.slice(0, 3);
-  const lowImportanceTitles = extratedTitles.slice(3);
-
-  console.log("subkeyword:", subkeyword);
-  const totalSubkeywords = topKeywords.concat(subkeyword);
-  console.log("totalSubkeywords:", totalSubkeywords);
-
-  console.log("analysis:", analysis);
-  const response = await makeOpenAiRequest<{
-    analysis_results: {
-      keyword_structure: {
-        spacing_pattern: string;
-        position_pattern: string;
-        average_length: {
-          syllables: string;
-          characters: string;
+      const response = await makeOpenAiRequest<{
+        analysis_results: {
+          keyword_structure: {
+            spacing_pattern: string;
+            position_pattern: string;
+            average_length: {
+              syllables: string;
+              characters: string;
+            };
+          };
+          common_patterns: string[];
+          keyword_combinations: string[];
         };
-      };
-      common_patterns: string[];
-      keyword_combinations: string[];
-    };
-    selected_subkeywords: string[];
-    optimized_titles: {
-      strict_structure: string[];
-      creative_structure: string[];
-    };
-  }>(
-    titlePrompt_test.generatePrompt(
-      mainkeyword,
-      highImportanceTitles,
-      lowImportanceTitles,
-      totalSubkeywords,
-      analysis
-    ),
-    titlePrompt_test.system, // 수정된 부분
-  );
- 
-  console.log("OpenAI 응답:", response);
+        selected_subkeywords: string[];
+        optimized_titles: {
+          strict_structure: string[];
+          creative_structure: string[];
+        };
+      }>(
+        titlePrompt_test.generatePrompt(
+          mainkeyword,
+          highImportanceTitles,
+          lowImportanceTitles,
+          totalSubkeywords,
+          analysis
+        ),
+        titlePrompt_test.system
+      );
 
-  const optimizedTitles = response.optimized_titles.strict_structure
-  .concat(response.optimized_titles.creative_structure);
-  // 응답 검증
-  if (!response.optimized_titles || !response.selected_subkeywords) {
-    console.error("OpenAI 응답이 예상 형식과 다릅니다:", response);
-    return {
-      selected_subkeywords: [],
-      optimizedTitles: [],
-      extractedTitles: []
-    };
+      const optimizedTitles = response.optimized_titles.strict_structure
+        .concat(response.optimized_titles.creative_structure);
+
+      if (!response.optimized_titles || !response.selected_subkeywords) {
+        throw new Error("OpenAI 응답이 예상 형식과 다릅니다");
+      }
+
+      return {
+        selected_subkeywords: response.selected_subkeywords || [],
+        optimizedTitles: optimizedTitles,
+        extractedTitles: extratedTitles
+      };
+
+    } catch (error) {
+      retryCount++;
+      console.error(`에러 발생 (시도 ${retryCount}/${MAX_RETRIES}):`, error);
+      
+      if (retryCount === MAX_RETRIES) {
+        console.error('최대 재시도 횟수 도달');
+        return {
+          selected_subkeywords: [],
+          optimizedTitles: [],
+          extractedTitles: []
+        };
+      }
+
+      // 다음 시도 전 대기
+      await wait(RETRY_DELAY);
+    }
   }
 
-  const selectedSubkeywords = response.selected_subkeywords;
-  console.log("selected_subkeywords:", selectedSubkeywords);
-
-  // 응답 데이터
-  console.log("generateTitle 응답 데이터:", JSON.stringify({
-    selected_subkeywords: selectedSubkeywords,
-    optimized_titles: optimizedTitles
-  }));
-
+  // 이 부분은 TypeScript를 만족시키기 위한 기본 반환값
   return {
-    selected_subkeywords: selectedSubkeywords || [],
-    optimizedTitles: optimizedTitles,
-    extractedTitles: extratedTitles
+    selected_subkeywords: [],
+    optimizedTitles: [],
+    extractedTitles: []
   };
 }
-
 
 function extractTextAfterTitleArea(html: string): string[] {
   const regex: RegExp = /<div class="title_area">[\s\S]*?<a[^>]*>(.*?)<\/a>/g;

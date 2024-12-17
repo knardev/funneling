@@ -2,8 +2,20 @@ import { Analysis } from "../../types";
 
 export const imagepromptPrompt = {
     system: `
-    You are an expert in creating image prompts for blog content. Your role is to analyze and enhance blog sections by inserting relevant and high-quality English image prompts. Every sentence you generate should be clear, concise, and specific to ensure the best possible image generation results.`,
-    template: `
+    You are an expert in creating image prompts for blog content. Your role is to analyze and enhance blog sections by inserting relevant and high-quality English image prompts. Every sentence you generate should be clear, concise, and specific to ensure the best possible image generation results.
+    
+    **Prefill Json Response**
+        {
+      "updatedContent": "{JUST RETURN THE ENHANCED CONTENT WITH IMAGE PROMPTS INSERTED}",
+
+      "image_prompts": {
+          "1": "A serene sunrise over a mountain range, wide-angle composition, soft natural lighting, peaceful and calm atmosphere, professional editorial photography, high-resolution details, Korea",
+          "2": "A group of professionals in a modern office, candid composition, bright indoor lighting, collaborative and dynamic mood, professional editorial photography, diverse team members, Korea",
+          "3": "A cozy home workspace setup, close-up composition, warm lighting, inviting and productive atmosphere, lifestyle photography, minimalist design elements, Korea",
+          "4": "A bright modern office space with large windows, wide-angle composition, natural daylight streaming in, energetic and fresh atmosphere, professional editorial photography, contemporary design elements, Korea",
+          "5": "A tranquil garden in full bloom, medium composition, natural lighting, relaxing and rejuvenating atmosphere, lifestyle photography, vibrant flower colors, Korea"
+    `,  
+          template: `
     Analyze and enhance the following blog content by inserting up to 10 English image prompts naturally throughout the text based on context. The content structure and placeholders are as follows:
     
     content: {allcontent}
@@ -45,19 +57,6 @@ export const imagepromptPrompt = {
             * No object/key-value structure - just a continuous text string
          2. "image_prompts": An object mapping each id to its corresponding image prompt
     
-    ### Example Output:
-    {
-      "updatedContent": "{JUST RETURN THE ENHANCED CONTENT WITH IMAGE PROMPTS INSERTED}",
-
-      "image_prompts": {
-          "1": "A serene sunrise over a mountain range, wide-angle composition, soft natural lighting, peaceful and calm atmosphere, professional editorial photography, high-resolution details, Korea",
-          "2": "A group of professionals in a modern office, candid composition, bright indoor lighting, collaborative and dynamic mood, professional editorial photography, diverse team members, Korea",
-          "3": "A cozy home workspace setup, close-up composition, warm lighting, inviting and productive atmosphere, lifestyle photography, minimalist design elements, Korea",
-          "4": "A bright modern office space with large windows, wide-angle composition, natural daylight streaming in, energetic and fresh atmosphere, professional editorial photography, contemporary design elements, Korea",
-          "5": "A tranquil garden in full bloom, medium composition, natural lighting, relaxing and rejuvenating atmosphere, lifestyle photography, vibrant flower colors, Korea"
-      }
-    }
-    
     ### Critical Requirements:
     - **updatedContent MUST BE A SINGLE STRING, not an object with sections**
     - **DO NOT split content into separate keys or restructure it**
@@ -75,36 +74,3 @@ export const imagepromptPrompt = {
         .replace("{analysis}", analysis ? JSON.stringify(analysis) : '');
     }
 };
-
-export const imagepromptPromptSchema = {
-   name: "imagepromptPromptSchema",
-   description: "imagepromptPromptSchema",
-   strict: true,
-   schema: {
-    type: "object",
-    properties: {
-      updatedContent: { 
-        type: "string" 
-      },
-      image_prompts: {
-        type: "object",
-        properties: {
-          "1": { type: "string" },
-          "2": { type: "string" },
-          "3": { type: "string" },
-          "4": { type: "string" },
-          "5": { type: "string" },
-          "6": { type: "string" },
-          "7": { type: "string" },
-          "8": { type: "string" },
-          "9": { type: "string" },
-          "10": { type: "string" }
-        },
-        required: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],  // image_prompts 내부의 required
-        additionalProperties: false
-      }
-    },
-    required: ["updatedContent", "image_prompts"],  // 최상위 레벨의 required
-    additionalProperties: false
-   }
-}

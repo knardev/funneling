@@ -1,7 +1,7 @@
 "use server";
 
 import { Analysis, Content } from "../../types";
-import { imagepromptPrompt, imagepromptPromptSchema } from "../../prompts/image/imagepromptPrompt";
+import { imagepromptPrompt } from "../../prompts/image/imagepromptPrompt";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
 
 export async function generateImagePrompt(
@@ -19,7 +19,6 @@ export async function generateImagePrompt(
             analysis 
         ),
         imagepromptPrompt.system,
-        imagepromptPromptSchema
     )
 
     const promptArray = Object.entries(response.image_prompts).map(([id,prompt])=> ({

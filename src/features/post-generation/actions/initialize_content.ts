@@ -104,7 +104,7 @@ async function extractAutocomplete(keyword: string) {
   }
 
   try {
-    let allResults = [];
+    const allResults: string[] = [];
 
     // 기본 키워드 자동완성 결과
     const mainResults = await fetchAutocomplete(keyword);

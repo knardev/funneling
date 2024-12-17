@@ -46,8 +46,9 @@ export function TitlePanel() {
       setSubKeywords(result.selected_subkeywords);
       setExtractedTitles(result.extractedTitles);
       updateLog(`Title generated: ${JSON.stringify(result)}`);
-    } catch (error: any) {
-      updateLog(`Error generating title: ${error.message}`);
+    } catch (error) {
+      console.error("Error generating title:", error);
+      updateLog("Error generating title");
     }
   };
 
