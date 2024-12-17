@@ -17,7 +17,6 @@ export function TitlePanel() {
   // Input states
   const [mainkeyword, setMainKeyword] = useState("");
   const [subkeywords, setSubKeywords] = useState<string[]>([]);
-
   const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
     industry_analysis: null,
     advantage_analysis: null,
@@ -25,6 +24,7 @@ export function TitlePanel() {
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [titles, setTitles] = useState<string[]>([]);
+  const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
 
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -44,6 +44,7 @@ export function TitlePanel() {
       const result = await generateTitle(mainkeyword, subkeywordlist, serviceAnalysis);
       setTitles(result.optimizedTitles);
       setSubKeywords(result.selected_subkeywords);
+      setExtractedTitles(result.extractedTitles);
       updateLog(`Title generated: ${JSON.stringify(result)}`);
     } catch (error: any) {
       updateLog(`Error generating title: ${error.message}`);
@@ -100,6 +101,13 @@ export function TitlePanel() {
                     ))
                 : "No titles"}
             </pre>
+            <pre>상위 노출 블로그 제목: {extractedTitles.length > 0
+             ? extractedTitles.map((title, index) => (
+                <div key={index}>
+                {index + 1}. {title}
+                <br />
+                </div>
+            )) : "No extracted titles"}</pre>
           </div>
           <div className="mt-4">
             <h3>Execution Logs:</h3>

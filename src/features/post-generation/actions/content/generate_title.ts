@@ -74,7 +74,8 @@ export async function generateTitle(
     console.error("OpenAI 응답이 예상 형식과 다릅니다:", response);
     return {
       selected_subkeywords: [],
-      optimizedTitles: []
+      optimizedTitles: [],
+      extractedTitles: []
     };
   }
 
@@ -89,7 +90,8 @@ export async function generateTitle(
 
   return {
     selected_subkeywords: selectedSubkeywords || [],
-    optimizedTitles: optimizedTitles
+    optimizedTitles: optimizedTitles,
+    extractedTitles: extratedTitles
   };
 }
 
