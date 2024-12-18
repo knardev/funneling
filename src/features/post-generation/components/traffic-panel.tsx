@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect ,useRef} from "react";
+import { useState } from "react";
 import React from "react";
 import {
   ResizableHandle,
@@ -10,7 +10,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 // Import your server actions
 import { initializeContent } from "@/features/post-generation/actions/initialize_content";
@@ -27,15 +26,15 @@ import { Analysis, FinalResult } from "../types";
 export function TrafficPanel() {
   // Input states
   const [mainkeyword, setMainKeyword] = useState("");
-    const [personaServiceName, setPersonaServiceName] = useState("");
-    const [serviceType, setServiceType] = useState("");
-    const [serviceAdvantages, setServiceAdvantages] = useState("");
+  const [personaServiceName, setPersonaServiceName] = useState("");
+  const [serviceType, setServiceType] = useState("");
+  const [serviceAdvantages, setServiceAdvantages] = useState("");
 
   // Result states
   const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
     industry_analysis: null,
     advantage_analysis: null,
-    target_needs: null
+    target_needs: null,
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [title, setTitle] = useState("");
@@ -44,8 +43,8 @@ export function TrafficPanel() {
   const [body, setBody] = useState("");
   const [conclusion, setConclusion] = useState("");
   const [updatedContent, setUpdatedContent] = useState("");
-  const [imagePrompts, setImagePrompts] = useState<{id:string,prompt:string}[]>([]);
-  const [images, setImages] = useState<{id:string,imageUrl:string}[]>([]);
+  const [imagePrompts, setImagePrompts] = useState<{ id: string; prompt: string }[]>([]);
+  const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
 
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -56,13 +55,12 @@ export function TrafficPanel() {
     service_advantage: serviceAdvantages,
   };
 
-
   const content = {
     title,
-    toc : [toc],
+    toc: [toc],
     intro,
     body,
-    conclusion
+    conclusion,
   };
 
   // Utility function to update logs
@@ -74,227 +72,227 @@ export function TrafficPanel() {
   };
 
   // Individual step execution handlers
-  const handleInitializeContent = async () => {
-    updateLog("Initializing content...");
-    const hasAllPersonaData=personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim()
+  const handleInitializeContent = async (): Promise<{
+    serviceanalysis: Analysis | null;
+    subkeywordlist: string[] | null;
+  }> => {
+    updateLog("초기화 중...");
+    const hasAllPersonaData =
+      personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
     const result = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
     setSubKeywordlist(result.subkeywordlist);
-    updateLog(`Content initialized: ${JSON.stringify(result)}`);
+    updateLog(`콘텐츠 초기화됨`);
+    return {
+      serviceanalysis: result.serviceanalysis || null,
+      subkeywordlist: result.subkeywordlist,
+    };
   };
 
-// // subkeywordlist 중 subkeywords 선택
-//   const handleGenerateTitle = async () => {
-//     updateLog("Generating title...");
-//     const result = await generateTitle(mainkeyword,subkeywordlist, serviceAnalysis);
-//     setTitle(result.title);
-//     setSubKeywords(result.subkeywords);
-//     updateLog(`Title generated: ${JSON.stringify(result)}`);
-//   };
-
-  const handleGenerateToc = async () => {
-    updateLog("Generating TOC...");
-    const result = await generateToc(mainkeyword, title, serviceAnalysis);
+  const handleGenerateToc = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string
+  ): Promise<string> => {
+    updateLog("목차 생성 중...");
+    const result = await generateToc(mainkeyword, currentTitle);
     setToc(result.toc);
-    updateLog(`TOC generated: ${JSON.stringify(result)}`);
+    updateLog(`목차 생성됨`);
+    return result.toc;
   };
 
-  const handleGenerateIntro = async () => {
-    updateLog("Generating intro...");
-    const result = await generateIntro(mainkeyword, title, toc, serviceAnalysis);
+  const handleGenerateIntro = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string
+  ): Promise<string> => {
+    const result = await generateIntro(mainkeyword, currentTitle, currentToc);
     setIntro(result.intro);
-    updateLog(`Intro generated: ${JSON.stringify(result)}`);
+    return result.intro;
   };
 
-  const handleGenerateBody = async () => {
-    updateLog("Generating body...");
-    const result = await generateBody(mainkeyword, title, toc, intro, serviceAnalysis);
+  const handleGenerateBody = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string,
+    currentIntro: string
+  ): Promise<string> => {
+    const result = await generateBody(mainkeyword, currentTitle, currentToc, currentIntro);
     setBody(result.body);
-    updateLog(`Body generated: ${JSON.stringify(result)}`);
+    return result.body;
   };
 
-  const handleGenerateConclusion = async () => {
-    updateLog("Generating conclusion...");
+  const handleGenerateConclusion = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string,
+    currentIntro: string,
+    currentBody: string
+  ): Promise<string> => {
     const result = await generateConclusion(
       mainkeyword,
-      title,
-      toc,
-      intro,
-      body,
-      serviceAnalysis
+      currentTitle,
+      currentToc,
+      currentIntro,
+      currentBody,
     );
     setConclusion(result.conclusion);
-    updateLog(`Conclusion generated: ${JSON.stringify(result)}`);
+    return result.conclusion;
   };
 
-  const handleGenerateImagePrompt = async () => {
-    updateLog("Generating image prompts...");
-    const result = await generateImagePrompt({
-      title,
-      toc : [toc],
-      intro,
-      body,
-      conclusion,
-    }, serviceAnalysis);
-    if(result.updatedContent){
-      setUpdatedContent(result.updatedContent)
-      setImagePrompts(result.imagePrompts);
+  const handleGenerateImagePrompt = async (
+    serviceanalysis: Analysis | null,
+    currentContent: {
+      title: string;
+      toc: string[];
+      intro: string;
+      body: string;
+      conclusion: string;
     }
-    updateLog(`Image prompts generated: ${JSON.stringify(result.imagePrompts)}`);
+  ): Promise<{
+    updatedContent: string;
+    imagePrompts: { id: string; prompt: string }[];
+  }> => {
+    const result = await generateImagePrompt(currentContent);
+    if (result.updatedContent) {
+      setUpdatedContent(result.updatedContent);
+    }
+    setImagePrompts(result.imagePrompts);
+    return {
+      updatedContent: result.updatedContent || "",
+      imagePrompts: result.imagePrompts,
+    };
   };
 
-  const handleGenerateImages = async () => {
-    updateLog("Generating images...");
-    const result = await generateImage(
-      imagePrompts
-    );
+  const handleGenerateImages = async (
+    imagePromptsData: { id: string; prompt: string }[]
+  ): Promise<{ id: string; imageUrl: string }[]> => {
+    updateLog("이미지 생성 중...");
+    const result = await generateImage(imagePromptsData);
     setImages(result.images);
-    updateLog(`Images generated: ${JSON.stringify(result.images)}`);
+    return result.images;
   };
-  
-  const handleSaveFinalResult = async () => {
-    try{
-    updateLog("Saving final result...");
-    const finalResult:FinalResult={
-      mainKeyword:mainkeyword,
-      persona,
-      service_analysis:serviceAnalysis,
-      content,
-      imagePrompts,
-      images,
-      updatedContent
-    }
-    const result = await saveFinalResult(finalResult);
-    updateLog(`Final result saved: ${JSON.stringify(result)}`);
-    }catch(error){
-      updateLog(`Error saving final result: ${error}`);
-      console.error("Error saving final result:", error);
+
+  const handleSaveFinalResult = async (finalResult: FinalResult) => {
+    try {
+      updateLog("최종 결과 저장 중...");
+      const result = await saveFinalResult(finalResult);
+    } catch (error) {
+      updateLog(`최종 결과 저장 오류: ${error}`);
+      console.error("최종 결과 저장 오류:", error);
     }
   };
 
-  // Run all steps in sequence
-  const handleRunAll = async () => {
-    updateLog("Running all steps...");
-    
+  // 새로운 통합 핸들러 함수들
+  // 1a. 초기화 및 TOC 생성
+  const handleInitializeAndGenerateToc = async () => {
     try {
-      // Initialize Content
-      updateLog("Initializing content...");
-      const hasAllPersonaData = personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
-      const initResult = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
-      updateLog(`Content initialized: ${JSON.stringify(initResult)}`);
-      setServiceAnalysis(initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
-      setSubKeywordlist(initResult.subkeywordlist);
-      
-    //   // Generate Title
-    //   updateLog("Generating title...");
-    //   const titleResult = await generateTitle(
-    //     mainkeyword,
-    //     initResult.subkeywordlist,
-    //     initResult.serviceanalysis
-    //   );
-    //   setTitle(titleResult.title);
-    //   setSubKeywords(titleResult.subkeywords);
-    //   updateLog(`Title generated: ${JSON.stringify(titleResult)}`);
-      
-      // Generate TOC
-      updateLog("Generating TOC...");
-      const tocResult = await generateToc(
-        mainkeyword,
+      updateLog("초기화 및 TOC 생성 시작...");
+      const initResult = await handleInitializeContent();
+      const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+      // No need to return, states are already set
+    } catch (error) {
+      updateLog(`초기화 및 TOC 생성 오류: ${error}`);
+      console.error("초기화 및 TOC 생성 오류:", error);
+    }
+  };
+
+  // 1b. 서론, 본문, 결론 생성
+  const handleGenerateIntroductionBodyConclusion = async () => {
+    try {
+      updateLog("컨텐츠 생성 시작...");
+      const introResult = await handleGenerateIntro(serviceAnalysis, title, toc);
+      const bodyResult = await handleGenerateBody(serviceAnalysis, title, toc, introResult);
+      const conclusionResult = await handleGenerateConclusion(serviceAnalysis, title, toc, introResult, bodyResult);
+      updateLog("컨텐츠 생성 완료");
+      // No need to return, states are already set
+    } catch (error) {
+      updateLog(`컨텐츠 생성 오류: ${error}`);
+      console.error("컨텐츠 생성 오류:", error);
+    }
+  };
+
+  // 1c. 이미지 프롬프트 및 이미지 생성
+  const handleGenerateImagePromptAndImages = async () => {
+    try {
+      updateLog("이미지 생성 시작...");
+      const currentContent = {
         title,
-        initResult.serviceanalysis
-      );
-      setToc(tocResult.toc);
-      updateLog(`TOC generated: ${JSON.stringify(tocResult)}`);
-      
-      // Generate Intro
-      updateLog("Generating intro...");
-      const introResult = await generateIntro(
-        mainkeyword,
-        title,
-        toc,
-        initResult.serviceanalysis
-      );
-      setIntro(introResult.intro);
-      updateLog(`Intro generated: ${JSON.stringify(introResult)}`);
-      
-      // Generate Body
-      updateLog("Generating body...");
-      const bodyResult = await generateBody(
-        mainkeyword,
-        title,
-        toc,
+        toc: [toc],
         intro,
-        initResult.serviceanalysis
-      );
-      setBody(bodyResult.body);
-      updateLog(`Body generated: ${JSON.stringify(bodyResult)}`);
-      
-      // Generate Conclusion
-      updateLog("Generating conclusion...");
-      const conclusionResult = await generateConclusion(
-        mainkeyword,
-        title,
-        tocResult.toc,
-        introResult.intro,
-        bodyResult.body,
-        initResult.serviceanalysis
-      );
-      setConclusion(conclusionResult.conclusion);
-      updateLog(`Conclusion generated: ${JSON.stringify(conclusionResult)}`);
-      
-      // Generate Image Prompt
-      updateLog("Generating image prompts...");
-      const imagePromptResult = await generateImagePrompt(
-        {
-          title: title,
-          toc: [tocResult.toc],
-          intro: introResult.intro,
-          body: bodyResult.body,
-          conclusion: conclusionResult.conclusion,
-        },
-        initResult.serviceanalysis
-      );
-      setUpdatedContent(imagePromptResult.updatedContent || "");
-      setImagePrompts(imagePromptResult.imagePrompts);
-      updateLog(`Image prompts generated: ${JSON.stringify(imagePromptResult.imagePrompts)}`);
-      
-      // Generate Images
-      updateLog("Generating images...");
-      const imagesResult = await generateImage(imagePromptResult.imagePrompts);
-      setImages(imagesResult.images);
-      updateLog(`Images generated: ${JSON.stringify(imagesResult.images)}`);
-      
-      // Save Final Result
-      updateLog("Saving final result...");
+        body,
+        conclusion,
+      };
+      const imagePromptResult = await handleGenerateImagePrompt(serviceAnalysis, currentContent);
+      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
+      updateLog("이미지 생성 완료");
+      // No need to return, states are already set
+    } catch (error) {
+      console.error("이미지 생성 오류:", error);
+    }
+  };
+
+  // 기존의 모든 단계를 순차적으로 실행하는 핸들러
+  const handleRunAll = async () => {
+    updateLog("모든 단계 실행 시작...");
+
+    try {
+      // 초기화 및 TOC 생성
+      updateLog("초기화 및 목차 생성...");
+      const initResult = await handleInitializeContent();
+      const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+
+      // 서론, 본문, 결론 생성
+      updateLog("컨텐츠 생성...");
+      const introResult = await handleGenerateIntro(initResult.serviceanalysis, title, tocResult);
+      const bodyResult = await handleGenerateBody(initResult.serviceanalysis, title, tocResult, introResult);
+      const conclusionResult = await handleGenerateConclusion(initResult.serviceanalysis, title, tocResult, introResult, bodyResult);
+
+      // 이미지 프롬프트 및 이미지 생성
+      updateLog("이미지 생성...");
+      const currentContent = {
+        title: title,
+        toc: [tocResult],
+        intro: introResult,
+        body: bodyResult,
+        conclusion: conclusionResult,
+      };
+      const imagePromptResult = await handleGenerateImagePrompt(initResult.serviceanalysis, currentContent);
+      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
+
+      // 최종 결과 저장
+      updateLog("최종 결과 저장...");
       const finalResult: FinalResult = {
-        mainKeyword:mainkeyword,
+        mainKeyword: mainkeyword,
         persona,
-        service_analysis: initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
+        service_analysis: initResult.serviceanalysis || {
+          industry_analysis: null,
+          advantage_analysis: null,
+          target_needs: null,
+        },
         content: {
           title: title,
-          toc: [tocResult.toc],
-          intro: introResult.intro,
-          body: bodyResult.body,
-          conclusion: conclusionResult.conclusion,
+          toc: [tocResult],
+          intro: introResult,
+          body: bodyResult,
+          conclusion: conclusionResult,
         },
         imagePrompts: imagePromptResult.imagePrompts,
-        images: imagesResult.images,
+        images: imagesResult,
         updatedContent: imagePromptResult.updatedContent || "",
       };
-      const saveResult = await saveFinalResult(finalResult);
-      updateLog(`Final result saved: ${JSON.stringify(saveResult)}`);
-      
-      updateLog("All steps completed.");
-      console.log("All steps completed.");
+      await handleSaveFinalResult(finalResult);
+
+      updateLog("모든 단계 실행 완료.");
+      console.log("모든 단계 실행 완료.");
     } catch (error) {
-      updateLog(`Error during run all steps: ${error}`);
-      console.error("Error during run all steps:", error);
+      updateLog(`모든 단계 실행 오류: ${error}`);
+      console.error("모든 단계 실행 오류:", error);
     }
   };
 
-  // Reset all states
+  // 상태 초기화 핸들러
   const handleResetStates = () => {
     setMainKeyword("");
     setPersonaServiceName("");
@@ -304,7 +302,7 @@ export function TrafficPanel() {
     setServiceAnalysis({
       industry_analysis: null,
       advantage_analysis: null,
-      target_needs: null
+      target_needs: null,
     });
     setTitle("");
     setToc("");
@@ -315,11 +313,11 @@ export function TrafficPanel() {
     setImagePrompts([]);
     setImages([]);
     setDebugLogs([]);
-    updateLog("States reset.");
+    updateLog("상태 초기화됨.");
   };
 
-   // 이미지 플레이스홀더(# [숫자])를 실제 이미지로 치환하여 렌더링하는 함수
-   const renderUpdatedContent = () => {
+  // 이미지 플레이스홀더(# [숫자])를 실제 이미지로 치환하여 렌더링하는 함수
+  const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
     const regex = /#\[(\d+)\]/g;
@@ -344,7 +342,7 @@ export function TrafficPanel() {
             key={number}
             src={image.imageUrl}
             alt={`Image ${number}`}
-            className="my-4 max-w-xs h-auto rounded-md object-contain"// 이미지 크기 조정 및 스타일링
+            className="my-4 max-w-xs h-auto rounded-md object-contain" // 이미지 크기 조정 및 스타일링
           />
         );
       } else {
@@ -360,7 +358,9 @@ export function TrafficPanel() {
       parts.push(updatedContent.substring(lastIndex));
     }
 
-    return parts.map((part, index) => <React.Fragment key={index}>{part}</React.Fragment>);
+    return parts.map((part, index) => (
+      <React.Fragment key={index}>{part}</React.Fragment>
+    ));
   };
 
   return (
@@ -368,43 +368,49 @@ export function TrafficPanel() {
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={25} maxSize={25}>
           <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
-            <h2>Initial Input</h2>
+            <h2>초기 입력</h2>
             <div>
-              <Label>Keyword</Label>
+              <Label>키워드</Label>
               <Input
-                placeholder="Enter keyword"
+                placeholder="키워드를 입력하세요"
                 value={mainkeyword}
                 onChange={(e) => setMainKeyword(e.target.value)}
               />
             </div>
             <div>
-              <Label>Title</Label>
+              <Label>제목</Label>
               <Input
-                placeholder="Enter title"
+                placeholder="제목을 입력하세요"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleInitializeContent}>
-                Initialize Content
+              <Button onClick={handleInitializeAndGenerateToc}>
+                초기화 및 TOC 생성
               </Button>
-              <Button onClick={handleGenerateToc}>Generate TOC</Button>
-              <Button onClick={handleGenerateIntro}>Generate Intro</Button>
-              <Button onClick={handleGenerateBody}>Generate Body</Button>
-              <Button onClick={handleGenerateConclusion}>
-                Generate Conclusion
+              <Button onClick={handleGenerateIntroductionBodyConclusion}>
+                컨텐츠 생성
               </Button>
-              <Button onClick={handleGenerateImagePrompt}>
-                Generate Image Prompt
+              <Button onClick={handleGenerateImagePromptAndImages}>
+                이미지 생성
               </Button>
-              <Button onClick={handleGenerateImages}>Generate Images</Button>
-              <Button onClick={handleSaveFinalResult}>Save Final Result</Button>
+              <Button onClick={() => handleSaveFinalResult({
+                mainKeyword: mainkeyword,
+                persona,
+                service_analysis: serviceAnalysis,
+                content,
+                imagePrompts,
+                images,
+                updatedContent
+              })}>
+                최종 결과 저장
+              </Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button onClick={handleRunAll}>Run All Steps</Button>
+              <Button onClick={handleRunAll}>모든 단계 실행</Button>
               <Button variant="destructive" onClick={handleResetStates}>
-                Reset States
+                상태 초기화
               </Button>
             </div>
           </div>
@@ -416,19 +422,17 @@ export function TrafficPanel() {
           className="p-4 flex flex-col gap-4"
         >
           <h2>Debug Panel</h2>
-          <div className= "flex-1 overflow-y-auto mt-4">
+          <div className="flex-1 overflow-y-auto mt-4">
             <div className="mt-4 space-y-2 text-sm">
-              <pre>Keyword: {mainkeyword}</pre>
-              <pre>Updated Content: {renderUpdatedContent()}</pre>
-              {/* <pre>Updated Content: {updatedContent}</pre>
-            <pre>Images: {images.map((image)=> `${image.id} : ${image.imageUrl}\n`).join("")}</pre> */}
-          </div>
-          <div className="mt-4">
-            <h3>Execution Logs:</h3>
-            <div className="text-sm">
-              {debugLogs.map((log, index) => (
-                <div key={index}>{log}</div>
-              ))}
+              <pre>키워드: {mainkeyword}</pre>
+              <pre>업데이트된 콘텐츠: {renderUpdatedContent()}</pre>
+            </div>
+            <div className="mt-4">
+              <h3>실행 로그:</h3>
+              <div className="text-sm">
+                {debugLogs.map((log, index) => (
+                  <div key={index}>{log}</div>
+                ))}
               </div>
             </div>
           </div>

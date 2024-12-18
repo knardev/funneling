@@ -26,9 +26,10 @@ export const imagepromptPrompt = {
     }
     `,  
     template: `
-    Analyze and enhance the following blog content by inserting up to 10 English image prompts naturally throughout the text based on context. The content structure and placeholders are as follows:
+    Analyze and enhance the following blog content by inserting up to 10 English image prompts naturally throughout the text based on context.
+   The content structure and placeholders are as follows:
     
-    content: {allcontent}
+    {allcontent}
     
     ### Instructions:
     1. **Content Analysis for Image Placement**:
@@ -48,7 +49,7 @@ export const imagepromptPrompt = {
     3. **Image Prompt Requirements**:
        - Each prompt must follow the structure:
          {Main subject/scene}, {composition details}, {lighting}, {mood/atmosphere}, {photography style}, {additional details}, Korea
-       - End each prompt with ", 한국"
+       - End each prompt with ", 대한민국"
        - Use the numbering format: #[1], #[2], #[3], etc.
 
     4. **Minimal Formatting Guidelines**:

@@ -39,16 +39,16 @@ export function TitlePanel() {
 
   // Generate Title
   const handleGenerateTitle = async () => {
-    updateLog("Generating title...");
+    updateLog("제목 생성 중...");
     try {
       const result = await generateTitle(mainkeyword, subkeywordlist, serviceAnalysis);
       setTitles(result.optimizedTitles);
       setSubKeywords(result.selected_subkeywords);
       setExtractedTitles(result.extractedTitles);
-      updateLog(`Title generated: ${JSON.stringify(result)}`);
+      updateLog("제목 생성 완료");
     } catch (error) {
-      console.error("Error generating title:", error);
-      updateLog("Error generating title");
+      console.error("제목 생성 오류:", error);
+      updateLog("제목 생성 오류");
     }
   };
 
@@ -66,9 +66,9 @@ export function TitlePanel() {
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={25} maxSize={25}>
           <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
-            <h2>Initial Input</h2>
+            <h2>초기 입력</h2>
             <div>
-              <Label>Keyword</Label>
+              <Label>키워드</Label>
               <Input
                 placeholder="Enter keyword"
                 value={mainkeyword}
@@ -76,8 +76,8 @@ export function TitlePanel() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleGenerateTitle}>Generate Title</Button>  
-              <Button onClick={handleResetStates}>Reset States</Button>
+              <Button onClick={handleGenerateTitle}>제목 생성</Button>  
+              <Button onClick={handleResetStates}>초기화</Button>
             </div>
           </div>
         </ResizablePanel>
@@ -89,10 +89,10 @@ export function TitlePanel() {
         >
           <h2>Debug Panel</h2>
           <div className="mt-4 space-y-2 text-sm">
-            <pre>Keyword: {mainkeyword}</pre>
-            <pre>Subkeywords: {subkeywords.join(", ") || "No subkeywords"}</pre>
+            <pre>키워드: {mainkeyword}</pre>
+            <pre>서브키워드: {subkeywords.join(", ") || "No subkeywords"}</pre>
             <pre>
-                Titles:
+                제목:
                 {titles.length > 0
                     ? titles.map((title, index) => (
                         <div key={index}>
