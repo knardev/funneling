@@ -58,6 +58,7 @@ export function TitlePanel() {
     setSubKeywords([]);
     setSubKeywordlist(null);
     setTitles([]);
+    setExtractedTitles([]);
     setDebugLogs([]);
   };
 
@@ -70,7 +71,7 @@ export function TitlePanel() {
             <div>
               <Label>키워드</Label>
               <Input
-                placeholder="Enter keyword"
+                placeholder="키워드를 입력하세요"
                 value={mainkeyword}
                 onChange={(e) => setMainKeyword(e.target.value)}
               />
@@ -111,7 +112,7 @@ export function TitlePanel() {
             )) : "No extracted titles"}</pre>
           </div>
           <div className="mt-4">
-            <h3>Execution Logs:</h3>
+            <h3>실행 로그:</h3>
             <div className="text-sm">
               {debugLogs.map((log, index) => (
                 <div key={index}>{log}</div>

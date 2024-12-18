@@ -178,6 +178,7 @@ export function TrafficPanel() {
     try {
       updateLog("최종 결과 저장 중...");
       const result = await saveFinalResult(finalResult);
+      updateLog("최종 결과 저장 완료");
     } catch (error) {
       updateLog(`최종 결과 저장 오류: ${error}`);
       console.error("최종 결과 저장 오류:", error);
@@ -188,13 +189,14 @@ export function TrafficPanel() {
   // 1a. 초기화 및 TOC 생성
   const handleInitializeAndGenerateToc = async () => {
     try {
-      updateLog("초기화 및 TOC 생성 시작...");
+      updateLog("초기화 및 목차 생성 시작...");
       const initResult = await handleInitializeContent();
       const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+      updateLog("초기화 및 목차 생성 완료");
       // No need to return, states are already set
     } catch (error) {
-      updateLog(`초기화 및 TOC 생성 오류: ${error}`);
-      console.error("초기화 및 TOC 생성 오류:", error);
+      updateLog(`초기화 및 목차 생성 오류: ${error}`);
+      console.error("초기화 및 목차 생성 오류:", error);
     }
   };
 
@@ -387,7 +389,7 @@ export function TrafficPanel() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleInitializeAndGenerateToc}>
-                초기화 및 TOC 생성
+                초기화 및 목차 생성
               </Button>
               <Button onClick={handleGenerateIntroductionBodyConclusion}>
                 컨텐츠 생성
