@@ -27,7 +27,6 @@ export const bodyPrompt = {
         주의: 본론은 글의 마무리나 결론을 포함하지 않아야 하며, 글의 마지막을 정리하거나 요약하지 않습니다. 결론은 따로 생성됩니다.
 
         메인키워드: {mainKeyword}
-        서브키워드: {subkeywords}
         제목 : "{title}"  
         목차 : "{toc}"  
         서론 : "{intro}"  
@@ -91,7 +90,6 @@ export const bodyPrompt = {
     `,
     generatePrompt: (
       mainKeyword: string,
-      subkeywords: string[],
       title: string,
       toc: string,
       intro: string,
@@ -109,7 +107,6 @@ export const bodyPrompt = {
         : ""; 
       return bodyPrompt.template
         .replace("{mainKeyword}", mainKeyword)
-        .replace("{subkeywords}", subkeywords.join('\n'))
         .replace("{title}", title)
         .replace("{toc}", toc)
         .replace("{intro}", intro)

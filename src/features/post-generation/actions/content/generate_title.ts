@@ -19,7 +19,7 @@ export async function generateTitle(
 
   while (retryCount < MAX_RETRIES) {
     try {
-      console.log(`시도 ${retryCount + 1}/${MAX_RETRIES}`);
+      console.log(`API 요청 시도 ${retryCount + 1}/${MAX_RETRIES}`);
       
       const mainkeyword = keyword;
       const subkeyword = subkeywordlist || [];

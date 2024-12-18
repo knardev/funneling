@@ -13,7 +13,6 @@ export const tocPrompt = {
 
   [기본 정보]
   - 메인 키워드: {mainKeyword}
-  - 서브 키워드: {subKeywords}
 
   [서비스 분석]
   {{serviceAnalysis}}
@@ -43,13 +42,11 @@ export const tocPrompt = {
   `,
   generatePrompt: (
     mainKeyword: string,
-    subkeywords: string[],
     title: string,
     analysis?: Analysis
   ): string => {
     return tocPrompt.template
       .replace("{mainKeyword}", mainKeyword)
-      .replace("{subKeywords}", subkeywords.join(', '))
       .replace("{title}", title)  
       .replace("{serviceAnalysis}", analysis ? JSON.stringify(analysis) : '');
   }

@@ -30,7 +30,6 @@ export const titlePrompt_test = {
               "여섯 번째 제목"
           ]
       }
-
     }
 `,
 

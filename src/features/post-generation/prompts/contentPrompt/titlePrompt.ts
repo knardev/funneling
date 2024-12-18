@@ -1,36 +1,7 @@
 import { Analysis } from "../../types";
 
 export const titlePrompt = {
-  system: `You are a professional SEO expert who specializes in creating highly effective blog titles that highlight unique business value propositions.
-
-    **Prefill JSON Response**
-      {
-        "analysis_results": {
-            "keyword_structure": {
-                "spacing_pattern": "주로 발견되는 띄어쓰기 패턴",
-                "position_pattern": "주로 발견되는 위치",
-                "average_length": {
-                    "syllables": "평균 음절 수",
-                    "characters": "평균 글자 수"
-                }
-            },
-            "common_patterns": ["패턴1", "패턴2", "패턴3"],
-            "keyword_combinations": ["조합1", "조합2", "조합3"]
-        },
-        "optimized_titles": {
-            "strict_structure": [
-                {"제목": "첫 번째 제목"},
-                {"제목": "두 번째 제목"},
-                {"제목": "세 번째 제목"}
-            ],
-            "creative_structure": [
-                {"제목": "네 번째 제목"},
-                {"제목": "다섯 번째 제목"},
-                {"제목": "여섯 번째 제목"}
-            ]
-        }
-      }`,
-
+  system: `You are a professional SEO expert who specializes in creating highly effective blog titles that highlight unique business value propositions.`,
   template: `### 블로그 제목 최적화 분석 ###
     아래는 '{mainKeyword}' 키워드로 네이버 블로그 상위에 노출된 블로그 제목 예시입니다.
     
@@ -91,6 +62,61 @@ export const titlePrompt = {
   }
 };
 
+export const titleResponseSchema = {
+  name: "titleResponseSchema",
+  description: "titleResponseSchema",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      analysis_results: {
+        type: "object",
+        properties: {
+          keyword_structure: {
+            type: "object",
+            properties: {
+              spacing_pattern: { type: "string" },
+              position_pattern: { type: "string" },
+              average_length: {
+                type: "object",
+                properties: {
+                  syllables: { type: "string" },
+                  characters: { type: "string" }
+                },
+                required: ["syllables", "characters"],
+                additionalProperties: false
+              }
+            },
+            required: ["spacing_pattern", "position_pattern", "average_length"],
+            additionalProperties: false
+          },
+          common_patterns: {
+            type: "array",
+            items: { type: "string" }
+          },
+          service_insights: {
+            type: "object",
+            properties: {
+              unique_value: { type: "string" },
+              target_needs: { type: "string" }
+            },
+            required: ["unique_value", "target_needs"],
+            additionalProperties: false
+          }
+        },
+        required: ["keyword_structure", "common_patterns", "service_insights"],
+        additionalProperties: false
+      },
+      selected_subkeywords: {
+        type: "array",
+        items: { type: "string" }
+      },
+      optimized_title: { type: "string" }
+    },
+    required: ["analysis_results", "selected_subkeywords", "optimized_title"],
+    additionalProperties: false
+  }
+};
 
 //response_format 
 

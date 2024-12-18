@@ -6,7 +6,6 @@ import { introPrompt } from "../../prompts/contentPrompt/introPrompt";
 
 export async function generateIntro(
     mainkeyword: string,
-    subkeywords: string[],
     title: string,
     toc:string,
     analysis?: Analysis,
@@ -17,7 +16,6 @@ export async function generateIntro(
   }>(
     introPrompt.generatePrompt(
       mainkeyword,
-      subkeywords,
       title,
       toc,
       analysis

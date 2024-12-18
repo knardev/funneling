@@ -129,10 +129,9 @@ export const introPrompt = {
     분석 내용은 내부적으로 처리하며, 최종적으로 생성된 서론 1개만 출력합니다. 서론은 독자의 니즈를 반영하며, 다양한 말투와 표현으로 매력적으로 작성되어야 합니다. 
     
       1. 메인 키워드: "{mainKeyword}"
-      2. 서브 키워드: "{subkeywords}"
-      3. 제목 : "{Title}"
-      4. 목차 : "{Toc}"
-      5. 서비스분석 : "{serviceAnalysis}"
+      2. 제목 : "{Title}"
+      3. 목차 : "{Toc}"
+      4. 서비스분석 : "{serviceAnalysis}"
     
     ### 작성 단계
     
@@ -190,14 +189,12 @@ export const introPrompt = {
 
     generatePrompt: (
       mainKeyword: string,
-      subkeywords: string[],
       title: string,
       toc: string,
       analysis?: Analysis
     ): string => {
       return introPrompt.template
         .replace("{mainKeyword}", mainKeyword)
-        .replace("{subkeywords}", subkeywords.join(', '))
         .replace("{title}", title)
         .replace("{toc}", toc)
         .replace("{serviceAnalysis}", analysis ? JSON.stringify(analysis) : '');

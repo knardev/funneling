@@ -5,7 +5,6 @@ import { bodyPrompt } from "../../prompts/contentPrompt/bodyPrompt";
 
 export async function generateBody(
   mainkeyword: string,
-  subkeywords: string[],
   title: string,
   toc:string,
   intro:string,
@@ -17,7 +16,6 @@ export async function generateBody(
     }>(
         bodyPrompt.generatePrompt(
             mainkeyword,
-            subkeywords,
             title,
             toc,
             intro,

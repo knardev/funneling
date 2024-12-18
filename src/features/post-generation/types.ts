@@ -62,7 +62,7 @@ export interface GeneratedImage {
 }
 
 export interface FinalResult {
-  keywords: KeywordObj;
+  mainKeyword: string;
   persona: Persona;
   service_analysis: Analysis;
   content: Content;

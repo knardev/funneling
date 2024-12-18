@@ -15,15 +15,13 @@ export async function saveFinalResult(
   finalResult: FinalResult
 ) {
   const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-  
-  const subkeywordsString = finalResult.keywords.subkeywords.join(',');
+
   const tocString = finalResult.content.toc.join(',');
 
   try {
     // 1. post_generations 테이블에 데이터 삽입
     const postGenerationData: Database['public']['Tables']['post_generations']['Insert'] = {
-      keyword: finalResult.keywords.mainKeyword,
-      sub_keywrod: subkeywordsString,
+      keyword: finalResult.mainKeyword,
       service_name: finalResult.persona.service_name || null,
       service_industry: finalResult.persona.service_industry || null,
       service_advantage: finalResult.persona.service_advantage || null,
