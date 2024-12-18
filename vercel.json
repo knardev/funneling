@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/**/*": {
+      "maxDuration": 300
+    },
+    "src/app/(dashboard)/**/*": {
+      "maxDuration": 300
+    }
+  }
+} 
