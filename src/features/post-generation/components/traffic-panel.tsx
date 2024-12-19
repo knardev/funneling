@@ -22,6 +22,8 @@ import { generateImage } from "@/features/post-generation/actions/image/generate
 
 import { saveFinalResult } from "../actions/save_finalResult";
 import { Analysis, FinalResult } from "../types";
+import { Textarea } from "@/components/ui/textarea";
+import { saveFeedback } from "../actions/saveFeedback";
 
 export function TrafficPanel() {
   // Input states
@@ -45,6 +47,7 @@ export function TrafficPanel() {
   const [updatedContent, setUpdatedContent] = useState("");
   const [imagePrompts, setImagePrompts] = useState<{ id: string; prompt: string }[]>([]);
   const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
+  const [feedback, setFeedback] = useState("");
 
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -185,6 +188,12 @@ export function TrafficPanel() {
     }
   };
 
+  const handleSaveFeedback = async () => {
+    updateLog("피드백 전송 중...");
+    const result = await saveFeedback(feedback);
+    updateLog("피드백 전송 완료");
+    setFeedback("");
+  };
   // 새로운 통합 핸들러 함수들
   // 1a. 초기화 및 TOC 생성
   const handleInitializeAndGenerateToc = async () => {
@@ -192,6 +201,7 @@ export function TrafficPanel() {
       updateLog("초기화 및 목차 생성 시작...");
       const initResult = await handleInitializeContent();
       const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+      setToc(tocResult);
       updateLog("초기화 및 목차 생성 완료");
       // No need to return, states are already set
     } catch (error) {
@@ -205,8 +215,11 @@ export function TrafficPanel() {
     try {
       updateLog("컨텐츠 생성 시작...");
       const introResult = await handleGenerateIntro(serviceAnalysis, title, toc);
+      setIntro(introResult);
       const bodyResult = await handleGenerateBody(serviceAnalysis, title, toc, introResult);
+      setBody(bodyResult);
       const conclusionResult = await handleGenerateConclusion(serviceAnalysis, title, toc, introResult, bodyResult);
+      setConclusion(conclusionResult);
       updateLog("컨텐츠 생성 완료");
       // No need to return, states are already set
     } catch (error) {
@@ -316,6 +329,7 @@ export function TrafficPanel() {
     setImages([]);
     setDebugLogs([]);
     updateLog("상태 초기화됨.");
+    setFeedback("");
   };
 
   // 이미지 플레이스홀더(# [숫자])를 실제 이미지로 치환하여 렌더링하는 함수
@@ -415,6 +429,18 @@ export function TrafficPanel() {
                 상태 초기화
               </Button>
             </div>
+            <h2>피드백</h2>
+            <Textarea className="flex-1"
+              placeholder={`더 나은 서비스를 위해 소중한 피드백 부탁드립니다!
+
+피드백 예시
+- 컨텐츠 방향: '이 부분은 ~한 느낌이에요. ~하게 수정하면 좋을 것 같아요.'
+- 이미지 관련: '이미지가 너무 ~해요. ~한 이미지면 더 좋을 것 같아요.'
+- 사용성: '복사 붙여넣기가 잘 안 돼요. 개선 부탁드립니다.'`}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+            />
+            <Button onClick={handleSaveFeedback}>피드백 전송</Button>
           </div>
         </ResizablePanel>
         <ResizableHandle className="bg-slate-300" />
@@ -427,6 +453,11 @@ export function TrafficPanel() {
           <div className="flex-1 overflow-y-auto mt-4">
             <div className="mt-4 space-y-2 text-sm">
               <pre>키워드: {mainkeyword}</pre>
+              <pre>제목: {title}</pre>
+              <pre>목차: {toc}</pre>
+              <pre>서론: {intro}</pre>
+              <pre>본문: {body}</pre>
+              <pre>결론: {conclusion}</pre>
               <pre>업데이트된 콘텐츠: {renderUpdatedContent()}</pre>
             </div>
             <div className="mt-4">
