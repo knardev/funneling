@@ -228,7 +228,7 @@ export function TrafficPanel() {
     }
   };
 
-  // 1c. 이미지 프롬프트 및 이미지 생성
+  // 1c. 이미지 프롬프트 및 이미지 생성 + 최종 결과 저장
   const handleGenerateImagePromptAndImages = async () => {
     try {
       updateLog("이미지 생성 시작...");
@@ -243,8 +243,21 @@ export function TrafficPanel() {
       const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
       updateLog("이미지 생성 완료");
       // No need to return, states are already set
+      updateLog("최종 결과 저장 중...");
+      const finalResult: FinalResult = {
+        mainKeyword: mainkeyword,
+        persona,
+        service_analysis: serviceAnalysis,
+        content,
+        imagePrompts: imagePromptResult.imagePrompts,
+        images: imagesResult,
+        updatedContent: imagePromptResult.updatedContent || "",
+      };
+      const result = await saveFinalResult(finalResult);
+      updateLog("최종 결과 저장 완료");
     } catch (error) {
-      console.error("이미지 생성 오류:", error);
+      updateLog(`최종 결과 저장 오류: ${error}`);
+      console.error("최종 결과 저장 오류:", error);
     }
   };
 
@@ -382,7 +395,7 @@ export function TrafficPanel() {
   return (
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={25} maxSize={25}>
+
           <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
             <h2>초기 입력</h2>
             <div>
@@ -390,7 +403,7 @@ export function TrafficPanel() {
               <Input
                 placeholder="키워드를 입력하세요"
                 value={mainkeyword}
-                onChange={(e) => setMainKeyword(e.target.value)}
+                onChange={(e) => setMainKeyword(e.target.value)}  
               />
             </div>
             <div>
@@ -410,17 +423,6 @@ export function TrafficPanel() {
               </Button>
               <Button onClick={handleGenerateImagePromptAndImages}>
                 이미지 생성
-              </Button>
-              <Button onClick={() => handleSaveFinalResult({
-                mainKeyword: mainkeyword,
-                persona,
-                service_analysis: serviceAnalysis,
-                content,
-                imagePrompts,
-                images,
-                updatedContent
-              })}>
-                최종 결과 저장
               </Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-4">
@@ -442,7 +444,7 @@ export function TrafficPanel() {
             />
             <Button onClick={handleSaveFeedback}>피드백 전송</Button>
           </div>
-        </ResizablePanel>
+ 
         <ResizableHandle className="bg-slate-300" />
         <ResizablePanel
           defaultSize={75}
@@ -451,15 +453,17 @@ export function TrafficPanel() {
         >
           <h2>Debug Panel</h2>
           <div className="flex-1 overflow-y-auto mt-4">
-            <div className="mt-4 space-y-2 text-sm">
-              <pre>키워드: {mainkeyword}</pre>
-              <pre>제목: {title}</pre>
-              <pre>목차: {toc}</pre>
-              <pre>서론: {intro}</pre>
-              <pre>본문: {body}</pre>
-              <pre>결론: {conclusion}</pre>
-              <pre>업데이트된 콘텐츠: {renderUpdatedContent()}</pre>
+            {!updatedContent && (
+              <div className="mt-4 space-y-2 text-sm">
+                <pre><span className="font-bold text-lg">키워드:</span> {mainkeyword}</pre>
+              <pre><span className="font-bold text-lg">제목:</span> {title}</pre>
+              <pre><span className="font-bold text-lg">목차:</span> {toc}</pre>
+              <pre><span className="font-bold text-lg">서론:</span> {intro}</pre>
+              <pre><span className="font-bold text-lg">본론:</span> {body}</pre>
+              <pre><span className="font-bold text-lg">결론:</span> {conclusion}</pre>
             </div>
+            )}
+            <pre><span className="font-bold text-lg">최종 콘텐츠:</span> {renderUpdatedContent()}</pre>
             <div className="mt-4">
               <h3>실행 로그:</h3>
               <div className="text-sm">

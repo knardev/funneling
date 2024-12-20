@@ -49,11 +49,11 @@ export const imagepromptPrompt = {
     3. **Image Prompt Requirements**:
        - Each prompt must follow the structure:
          {Main subject/scene}, {composition details}, {lighting}, {mood/atmosphere}, {photography style}, {additional details}, Korea
-       - End each prompt with ", 대한민국"
+       - End each prompt with ", KOREA"
        - Use the numbering format: #[1], #[2], #[3], etc.
 
     4. **Minimal Formatting Guidelines**:
-       - You may ONLY add line breaks for readability
+       - You may ONLY add line breaks for readability in intro, body, and conclusion
        - Add a single empty line between natural paragraph breaks
        - DO NOT modify, rewrite, or reorganize any content
        - DO NOT add any other formatting or structural changes
