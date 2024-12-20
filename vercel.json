@@ -6,5 +6,6 @@
     "src/app/(dashboard)/**/*": {
       "maxDuration": 60
     }
-  }
-} 
+  },
+  "alias": "your-custom-url.vercel.app"
+}
