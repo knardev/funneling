@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "src/app/api/**/*": {
+      "maxDuration": 60
+    },
+    "src/app/(dashboard)/**/*": {
+      "maxDuration": 60
+    }
+  },
+  "alias": "your-custom-url.vercel.app"
+}
