@@ -1,20 +1,20 @@
 //// config.ts
-import { PredictionInput, PredictionResponse, ApiResponse } from "../../types";
+import { ApiResponse, PredictionInput, PredictionResponse } from "../../types";
 
 export const REPLICATE_CONFIG = {
-    API: {
-      BASE_URL: "https://api.replicate.com/v1/models/black-forest-labs/flux-dev", 
-      PREDICTIONS_ENDPOINT: "/predictions",
-      KEY: process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN, // 환경 변수에서 API 키 불러오기
-      MODEL: "black-forest-labs/flux-dev", // 모델 이름 (엔드포인트 URL에 반영)
-      MAX_WAIT_TIME: 300000, // 최대 대기 시간 (밀리초) - 5분
-      RETRY_DELAY: 5000, // 재시도 간격 (밀리초) - 5초
-      MAX_RETRIES: 3, // 최대 재시도 횟수
-    },
-  };
+  API: {
+    BASE_URL: "https://api.replicate.com/v1/models/black-forest-labs/flux-dev",
+    PREDICTIONS_ENDPOINT: "/predictions",
+    KEY: process.env.REPLICATE_API_TOKEN, // 환경 변수에서 API 키 불러오기
+    MODEL: "black-forest-labs/flux-dev", // 모델 이름 (엔드포인트 URL에 반영)
+    MAX_WAIT_TIME: 300000, // 최대 대기 시간 (밀리초) - 5분
+    RETRY_DELAY: 5000, // 재시도 간격 (밀리초) - 5초
+    MAX_RETRIES: 3, // 최대 재시도 횟수
+  },
+};
 
 export async function makeReplicateRequest(
-  id:string,
+  id: string,
   prompt: string,
 ): Promise<string> {
   const input: PredictionInput = {
@@ -28,7 +28,7 @@ export async function makeReplicateRequest(
     console.log(`예측 시작 ID: ${prediction.uuid}`);
 
     const imageUrl = await waitForResult(prediction);
-    console.log("imageUrl", imageUrl)
+    console.log("imageUrl", imageUrl);
 
     return imageUrl;
   } catch (error) {
@@ -41,7 +41,7 @@ async function makeRequest(
   url: string,
   method: "GET" | "POST",
   headers: Record<string, string>,
-  payload: Record<string, object> | null = null
+  payload: Record<string, object> | null = null,
 ): Promise<PredictionResponse> {
   const options: RequestInit = {
     method,
@@ -62,11 +62,17 @@ async function makeRequest(
   // 상태 코드 검증
   if (method === "POST") {
     if (response.status !== 201 || responseData.error) {
-      throw new Error(responseData.error?.message || `API 요청 실패: 상태 코드 ${response.status}`);
+      throw new Error(
+        responseData.error?.message ||
+          `API 요청 실패: 상태 코드 ${response.status}`,
+      );
     }
   } else if (method === "GET") {
     if (response.status !== 200 || responseData.error) {
-      throw new Error(responseData.error?.message || `API 요청 실패: 상태 코드 ${response.status}`);
+      throw new Error(
+        responseData.error?.message ||
+          `API 요청 실패: 상태 코드 ${response.status}`,
+      );
     }
   }
 
@@ -78,19 +84,22 @@ async function makeRequest(
  * @param input 예측 입력 데이터
  * @returns 예측 응답 객체
  */
-async function startPrediction(input: PredictionInput['prompt']): Promise<PredictionResponse> {
-  const url = `${REPLICATE_CONFIG.API.BASE_URL}${REPLICATE_CONFIG.API.PREDICTIONS_ENDPOINT}`;
+async function startPrediction(
+  input: PredictionInput["prompt"],
+): Promise<PredictionResponse> {
+  const url =
+    `${REPLICATE_CONFIG.API.BASE_URL}${REPLICATE_CONFIG.API.PREDICTIONS_ENDPOINT}`;
   const headers = {
     "Authorization": `Bearer ${REPLICATE_CONFIG.API.KEY}`,
     "Content-Type": "application/json",
-    "Prefer": "wait"
+    "Prefer": "wait",
   };
 
   const payload = {
-    "input":{
-      "prompt":input,
-      "guidance":3.5
-    }
+    "input": {
+      "prompt": input,
+      "guidance": 3.5,
+    },
   };
 
   const response = await makeRequest(url, "POST", headers, payload);
@@ -117,19 +126,28 @@ async function waitForResult(prediction: PredictionResponse): Promise<string> {
 
     try {
       // status 조회는 GET 요청
-      const result = await makeRequest(prediction.urls.get, "GET", headers) as PredictionResponse;
+      const result = await makeRequest(
+        prediction.urls.get,
+        "GET",
+        headers,
+      ) as PredictionResponse;
 
       switch (result.status) {
         case "succeeded":
           console.log("Prediction succeeded.", result);
-          if (result.output && Array.isArray(result.output) && result.output.length > 0) {
+          if (
+            result.output && Array.isArray(result.output) &&
+            result.output.length > 0
+          ) {
             // result.output에 이미지 URL이 있을 경우 여기서 반환
             // 해당 모델 문서 참조 필요
-            return result.output[0]; 
+            return result.output[0];
           }
           throw new Error("이미지 생성은 성공했으나 결과가 없습니다.");
         case "failed":
-          throw new Error(`이미지 생성 실패: ${result.error?.message || "알 수 없는 오류"}`);
+          throw new Error(
+            `이미지 생성 실패: ${result.error?.message || "알 수 없는 오류"}`,
+          );
         case "canceled":
           throw new Error("이미지 생성이 취소됨");
         default:
@@ -140,7 +158,9 @@ async function waitForResult(prediction: PredictionResponse): Promise<string> {
       if (++retryCount > REPLICATE_CONFIG.API.MAX_RETRIES) {
         throw error;
       }
-      console.warn(`재시도 ${retryCount}/${REPLICATE_CONFIG.API.MAX_RETRIES} - 오류: ${error}`);
+      console.warn(
+        `재시도 ${retryCount}/${REPLICATE_CONFIG.API.MAX_RETRIES} - 오류: ${error}`,
+      );
       await delay(REPLICATE_CONFIG.API.RETRY_DELAY);
     }
   }
