@@ -70,6 +70,11 @@ export interface FinalResult {
   images: GeneratedImage[];
   updatedContent: string;
 }
-
+// 섹션 정보를 담는 인터페이스 정의
+export interface Section {
+  order: number;
+  title: string;
+  type: '인플루언서' | '인기' | '브랜드' | '블로그' | '기타';
+}
 
 export * from './types';

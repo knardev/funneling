@@ -1,9 +1,9 @@
 "use server";
 
-import {naverUtils} from "../utils/naver";
-import { Analysis, Persona } from "../types";
-import { makeClaudeRequest } from "../utils/ai/claude";
-import { initialContentPrompt } from "../prompts/initialcontentPrompt";
+import {naverUtils} from "../../utils/naver";
+import { Analysis, Persona } from "../../types";
+import { makeClaudeRequest } from "../../utils/ai/claude";
+import { initialContentPrompt } from "../../prompts/initialcontentPrompt";
 
 export async function initializeContent(
     keyword: string,

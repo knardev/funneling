@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 // Import your server actions
-import { initializeContent } from "@/features/post-generation/actions/initialize_content";
+import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
 import { generateToc } from "@/features/post-generation/actions/content/generate_toc";
 import { generateIntro } from "@/features/post-generation/actions/content/generate_intro";
@@ -22,7 +22,7 @@ import { generateImagePrompt } from "@/features/post-generation/actions/image/ge
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 
 import { Analysis, FinalResult } from "../types";
-import { saveFinalResult } from "../actions/save_finalResult";
+import { saveFinalResult } from "../actions/others/save_finalResult";
 
 export function BrandPanel() {
   // Input states
