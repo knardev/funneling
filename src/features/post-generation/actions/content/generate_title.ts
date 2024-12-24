@@ -1,10 +1,9 @@
  "use server";
 
 import { TitleResponse, Analysis, Persona } from "../../types";
-import { fetchBlogTitles } from "../../utils/naver";
-import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
+import { fetchTitleScraping } from "../../utils/naver/titlescraping";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
-import { titlePrompt_test } from "../../prompts/contentPrompt/titlePrompt_test";
+import { titlePrompt} from "../../prompts/contentPrompt/titlePrompt";
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -24,13 +23,16 @@ export async function generateTitle(
       const mainkeyword = keyword;
       const subkeyword = subkeywordlist || [];
 
-      const html1 = await fetchBlogTitles(mainkeyword);
-      const extractedText = await extractTextAfterTitleArea(html1);
-      const extratedTitles: string[] = limitTextArray(extractedText);
+      const sections = await fetchTitleScraping(mainkeyword);
+      const extratedTitles: string[] = sections.flatMap(section => section.titles);
+
+      // Get titles from each section
+      const highImportanceTitles = sections[0]?.titles || [];
+      const middleImportanceTitles = sections[1]?.titles || [];
+      const lowImportanceTitles = sections[2]?.titles || [];
+
 
       const topKeywords = extractTopKeywords(extratedTitles);
-      const highImportanceTitles = extratedTitles.slice(0, 3);
-      const lowImportanceTitles = extratedTitles.slice(3);
 
       const totalSubkeywords = topKeywords.concat(subkeyword);
 
@@ -53,14 +55,15 @@ export async function generateTitle(
           creative_structure: string[];
         };
       }>(
-        titlePrompt_test.generatePrompt(
+        titlePrompt.generatePrompt(
           mainkeyword,
           highImportanceTitles,
+          middleImportanceTitles,
           lowImportanceTitles,
           totalSubkeywords,
           analysis
         ),
-        titlePrompt_test.system
+        titlePrompt.system
       );
 
       const optimizedTitles = response.optimized_titles.strict_structure

@@ -1,6 +1,6 @@
 "use server";
 
-import {naverUtils} from "../../utils/naver";
+import {naverUtils} from "../../utils/naver/naver";
 import { Analysis, Persona } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 import { initialContentPrompt } from "../../prompts/initialcontentPrompt";

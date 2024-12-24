@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
-import { scrapeNaverSections } from "@/features/post-generation/actions/others/counting_smartblock";
 import { Analysis, Section } from "../types";
 
 export function TitlePanel() {
@@ -51,12 +50,19 @@ export function TitlePanel() {
         },
         body: JSON.stringify({ keyword: mainkeyword }),
       });
-
+  
       if (!response.ok) {
-        throw new Error("스크래핑 실패");
+        throw new Error(`스크래핑 실패: ${response.status}`);
       }
-
+  
       const { sections: scrapedSections } = await response.json();
+      
+      // sections가 undefined이거나 비어있는 경우 처리
+      if (!scrapedSections || scrapedSections.length === 0) {
+        updateLog("스크래핑 결과가 없습니다.");
+        return;
+      }
+  
       setSections(scrapedSections);
       updateLog(`스크래핑 완료: ${scrapedSections.length}개 섹션 발견`);
     } catch (error) {
@@ -66,7 +72,6 @@ export function TitlePanel() {
       setIsScrapingLoading(false);
     }
   };
-
   // 제목 생성 핸들러 수정 (스크래핑 부분 제거)
   const handleGenerateTitle = async () => {
     updateLog("제목 생성 시작...");
@@ -122,32 +127,6 @@ export function TitlePanel() {
                 초기화
               </Button>
             </div>
-
-            {/* 스크래핑 결과 표시 위치 이동 */}
-            {sections.length > 0 && (
-              <div className="mt-4">
-                <h3 className="font-bold mb-2">스마트블록 섹션</h3>
-                 <pre>키워드 검색 결과 상위노출 순서입니다.</pre>
-                <table className="w-full border-collapse border">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border p-2">순서</th>
-                      <th className="border p-2">유형</th>
-                      <th className="border p-2">제목</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sections.map((section) => (
-                      <tr key={section.order}>
-                        <td className="border p-2">{section.order}</td>
-                        <td className="border p-2">{section.type}</td>
-                        <td className="border p-2">{section.title}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         </ResizablePanel>
         <ResizableHandle className="bg-slate-300" />
@@ -156,33 +135,54 @@ export function TitlePanel() {
           maxSize={75}
           className="p-4 flex flex-col gap-4"
         >
-          <h2>Debug Panel</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            <pre>키워드: {mainkeyword}</pre>
-            <pre>서브키워드: {subkeywords.join(", ") || "No subkeywords"}</pre>
-            <pre>
-              제목:
-              {titles.length > 0
-                ? titles.map((title, index) => (
-                    <div key={index}>
-                      {index + 1}. {title}
-                      <br />
-                    </div>
-                  ))
-                : "No titles"}
-            </pre>
-            <pre>
-              상위 노출 블로그 제목: {extractedTitles.length > 0
-                ? extractedTitles.map((title, index) => (
-                    <div key={index}>
-                      {index + 1}. {title}
-                      <br />
-                    </div>
-                  ))
-                : "No extracted titles"}
-            </pre>
+        <div className="flex-1 overflow-y-auto mt-4">
+          <div className="mt-4 space-y-2 text-lg font-bold">
+            <h2>키워드: {mainkeyword}</h2>
+            <h2>서브키워드: {subkeywords.join(", ") || "No subkeywords"}</h2>
+            <h2>
+              상위 패턴 제목:
+              {titles.length > 0 && titles.slice(0, 3).map((title, index) => (
+                <div key={index}>
+                  {index + 1}. {title}
+                  <br />
+                </div>
+              ))}
+            </h2>
+            <h2>
+              서브키워드 활용 제목:
+              {titles.length > 3 && titles.slice(3, 6).map((title, index) => (
+                <div key={index}>
+                  {index + 1}. {title}
+                  <br />
+                </div>
+              ))}
+            </h2>
           </div>
-          <div className="mt-4">
+          <hr/>
+          <br/>
+          <div>
+            {sections.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold">키워드 검색 결과 상위 노출 순서입니다.</h2>
+                <br />
+              </div>
+            )}
+          </div>
+          {sections.map((section) => (
+          <div key={section.order} className="mb-4">
+            <h3 className="font-bold text-md">{section.Tapname} ({section.order}번째 탭, {section.type})
+            </h3>
+            <div className="ml-4">
+              {section.titles.map((title, index) => (
+                <p key={index}>
+                  {index + 1}. {title}
+                </p>
+              ))}
+            </div>
+            <br />
+          </div>
+        ))}
+                <div className="mt-4">
             <h3>실행 로그:</h3>
             <div className="text-sm">
               {debugLogs.map((log, index) => (
@@ -190,8 +190,10 @@ export function TitlePanel() {
               ))}
             </div>
           </div>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
   );
 }
+

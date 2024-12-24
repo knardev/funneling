@@ -3,7 +3,7 @@ import { ApiResponse } from "../../types";
 const OPENAI_CONFIG = {
   API: {
     URL: "https://api.openai.com/v1/chat/completions",
-    KEY: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    KEY: process.env.OPENAI_API_KEY,
     MODEL: "gpt-4o",
     MAX_TOKENS: 6000
   }

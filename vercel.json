@@ -1,11 +1,12 @@
 {
   "functions": {
     "src/app/api/**/*": {
+      "memory": 1024,
       "maxDuration": 60
     },
     "src/app/(dashboard)/**/*": {
+      "memory": 1024,
       "maxDuration": 60
     }
-  },
-  "alias": "https://funneling-bm237wpz8-andys-projects-c028726c.vercel.app"
+  }
 }

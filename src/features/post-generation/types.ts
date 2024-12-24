@@ -73,8 +73,9 @@ export interface FinalResult {
 // 섹션 정보를 담는 인터페이스 정의
 export interface Section {
   order: number;
-  title: string;
-  type: '인플루언서' | '인기' | '브랜드' | '블로그' | '기타';
+  Tapname: string;
+  type: '인플루언서' | '인기주제' | '인기글' | '브랜드' | '블로그' | '기타';
+  titles: string[];
 }
 
 export * from './types';
