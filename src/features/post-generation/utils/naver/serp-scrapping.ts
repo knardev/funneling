@@ -141,9 +141,10 @@ function extractSmartBlocks(
   // 모든 블록 title 추출 div.api_subject_bx
   $("div.fds-collection-root").each((_, blockElement) => {
     const type =
-      $(blockElement).find(".fds-comps-header-headline").text().trim()
-      $(blockElement).find('.mod_title_area .title_wrap h2.title').text().trim
-      || null;
+    $(blockElement).find(".fds-comps-header-headline").text().trim() ||
+    $(blockElement).find('.mod_title_area .title_wrap h2.title').text().trim() ||
+    null;
+  
 
     // Skip excluded titles
     if (!type || excludeValues.has(type)) return;
@@ -349,11 +350,7 @@ function extractSmartBlocks(
   return { smartBlocks, popularTopics, basicBlock: basicBlockItems };
 }
 
-/**
- * Fetch SERP results for a given keyword and process additional data from `moreButtonLink`.
- * @param keyword - The search keyword.
- * @returns {Promise<SerpData | null>} Parsed SERP data or null if an error occurs.
- */
+
 export async function fetchSerpResults(
   keyword: string,
 ): Promise<SerpData | null> {
@@ -390,7 +387,6 @@ export async function fetchSerpResults(
       if (block.moreButtonLink) {
         console.log(
           `[INFO] Fetching additional data for block: ${block.type}`,
-          console.log(`[DEBUG] moreButtonRawLink: ${block.moreButtonRawLink}`)
         );
         if(block.type?.includes("인플루언서")){
           continue;
