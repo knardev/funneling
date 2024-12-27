@@ -78,4 +78,37 @@ export interface Section {
   titles: string[];
 }
 
+export interface SmartBlockItem {
+  thumbnailImageUrl: string | null;
+  siteName: string | null;
+  siteUrl: string | null;
+  isBlog: boolean;
+  issueDate: string | null;
+  postTitle: string | null;
+  postUrl: string | null;
+  postContent: string | null;
+  postImageCount: number | null;
+  rank: number;
+}
+
+export interface SmartBlock {
+  type: string | null;
+  items: SmartBlockItem[];
+  moreButtonLink: string | null;
+  moreButtonRawLink: string | null;
+}
+
+export interface PopularTopicItem {
+  title: string | null;
+  thumbnailImageUrl: string | null;
+  detailSerpUrl: string | null;
+}
+
+export interface SerpData {
+  smartBlocks: SmartBlock[];
+  popularTopics: PopularTopicItem[];
+  basicBlock: SmartBlockItem[];
+}
+
+
 export * from './types';

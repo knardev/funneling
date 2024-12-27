@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import {  fetchTitleScraping } from '@/features/post-generation/utils/naver/titlescraping'; 
+import { fetchSerpResults } from '@/features/post-generation/utils/naver/serp-scrapping';
 // ↑ 본인 프로젝트 구조에 맞춰 경로/폴더를 지정해 주세요
 
 export const runtime = 'edge';
@@ -16,9 +16,17 @@ export async function POST(request: Request) {
     }
 
     // 실질적인 스크래핑 및 분류 로직은 별도의 함수로 분리
-    const sections = await fetchTitleScraping(keyword);
+    const result = await fetchSerpResults(keyword);
+    if (!result) {
+      return NextResponse.json({ error: 'No results found' }, { status: 404 });
+    }
+    const {smartBlocks, popularTopics, basicBlock} = result;
 
-    return NextResponse.json({ sections });
+    return NextResponse.json({ 
+      smartBlocks,
+      popularTopics,
+      basicBlock,
+     });
   } catch (error) {
     console.error('Scraping error:', error);
     return NextResponse.json(

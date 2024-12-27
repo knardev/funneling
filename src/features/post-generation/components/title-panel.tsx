@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
-import { Analysis, Section } from "../types";
+import { Analysis, SerpData, SmartBlockItem,PopularTopicItem, } from "../types";
 
 export function TitlePanel() {
   // Input states
@@ -24,7 +24,11 @@ export function TitlePanel() {
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [titles, setTitles] = useState<string[]>([]);
   const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
+  const [serpdata, setserpdata] = useState<SerpData>({
+    smartBlocks: [],
+    popularTopics: [],
+    basicBlock: []
+  });
   const [isScrapingLoading, setIsScrapingLoading] = useState(false);
 
   // Debug log state
@@ -43,7 +47,7 @@ export function TitlePanel() {
     updateLog("네이버 검색 결과 스크래핑 시작...");
     setIsScrapingLoading(true);
     try {
-      const response = await fetch("/api/scrape", {
+      const response = await fetch("/api/scrapping-serp-results", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,16 +59,15 @@ export function TitlePanel() {
         throw new Error(`스크래핑 실패: ${response.status}`);
       }
   
-      const { sections: scrapedSections } = await response.json();
-      
-      // sections가 undefined이거나 비어있는 경우 처리
-      if (!scrapedSections || scrapedSections.length === 0) {
+      const { smartBlocks,popularTopics,basicBlock } = await response.json();
+
+      if (!smartBlocks || smartBlocks.length === 0) {
         updateLog("스크래핑 결과가 없습니다.");
         return;
       }
-  
-      setSections(scrapedSections);
-      updateLog(`스크래핑 완료: ${scrapedSections.length}개 섹션 발견`);
+      
+      setserpdata({ smartBlocks, popularTopics, basicBlock });
+      updateLog(`스크래핑 완료: ${smartBlocks.length}개 섹션 발견`);
     } catch (error) {
       console.error("스크래핑 중 오류:", error);
       updateLog(`오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
@@ -95,7 +98,7 @@ export function TitlePanel() {
     setTitles([]);
     setExtractedTitles([]);
     setDebugLogs([]);
-    setSections([]);  // 섹션 정보도 초기화
+    setserpdata({ smartBlocks: [], popularTopics: [], basicBlock: [] });  // 섹션 정보도 초기화
   };
 
   return (
@@ -161,36 +164,41 @@ export function TitlePanel() {
           <hr/>
           <br/>
           <div>
-            {sections.length > 0 && (
+            {(serpdata.smartBlocks.length > 0 || serpdata.popularTopics.length > 0 || serpdata.basicBlock.length > 0) && (
               <div>
                 <h2 className="text-lg font-bold">키워드 검색 결과 상위 노출 순서입니다.</h2>
                 <br />
               </div>
             )}
-          </div>
-          {sections.map((section) => (
-          <div key={section.order} className="mb-4">
-            <h3 className="font-bold text-md">{section.Tapname} ({section.order}번째 탭, {section.type})
-            </h3>
-            <div className="ml-4">
-              {section.titles.map((title, index) => (
+            {/* Smart Blocks Section */}
+            {serpdata.smartBlocks.map((block, blockIndex) => (
+              <div key={blockIndex} className="mb-4">
+              <h3 className="font-bold text-md">
+                스마트 블록 ({blockIndex + 1}번째 블록)
+              </h3>
+              <div className="ml-4">
+                {block.items.map((item: SmartBlockItem, index: number) => (
                 <p key={index}>
-                  {index + 1}. {title}
+                  {index + 1}. {item.postTitle}
                 </p>
-              ))}
-            </div>
-            <br />
+                ))}
+              </div>
+              <br />
+              </div>
+            ))}
+            <div>
+                </div>
+                <br />
+              </div>
+
           </div>
-        ))}
-                <div className="mt-4">
+          {/* <div className="mt-4">
             <h3>실행 로그:</h3>
             <div className="text-sm">
               {debugLogs.map((log, index) => (
                 <div key={index}>{log}</div>
               ))}
-            </div>
-          </div>
-          </div>
+            </div> */}
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
