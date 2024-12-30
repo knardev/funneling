@@ -1,4 +1,7 @@
 // app/lib/utils/fetchAndClassifySections.ts
+//내가 개발한 것.
+// api_subject_bx로 순서 가져옴
+
 
 import * as cheerio from 'cheerio';
 import { Section } from '@/features/post-generation/types'; 

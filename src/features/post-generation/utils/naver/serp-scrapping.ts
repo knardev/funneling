@@ -1,5 +1,7 @@
 import * as cheerio from "cheerio";
 import { SmartBlock, SmartBlockItem, PopularTopicItem, SerpData } from "@/features/post-generation/types";
+import { Cheerio } from "cheerio";
+import type { Element } from "domhandler";
 
 
 /**
@@ -44,14 +46,6 @@ async function fetchAllDetailSerpData(
     const $ = cheerio.load(html);
 
     $("div.fds-ugc-block-mod").each((index, itemElement) => {
-      const thumbnailImageUrl =
-        $(itemElement).find(".fds-thumb-small img").attr("src") || null;
-      const siteName =
-        $(itemElement).find(".fds-info-inner-text span").text() || null;
-      const siteUrl =
-        $(itemElement).find(".fds-info-inner-text").attr("href") || null;
-      const isBlog = siteUrl?.includes("blog") ?? false;
-      const issueDate =
         $(itemElement).find(".fds-info-sub-inner-text").text() || null;
         const postTitle =
         $(itemElement)
@@ -63,31 +57,11 @@ async function fetchAllDetailSerpData(
           .contents()
           .text()
           .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-        null;      
-      const postUrl = $(itemElement)
-        .find(".fds-comps-right-image-text-title")
-        .attr("href") || null;
-      const postContent = $(itemElement)
-        .find(".fds-comps-right-image-text-content span")
-        .text() || null;
-      const postImageCountText = $(itemElement)
-        .find(".fds-comps-right-image-content-image-badge span")
-        .text();
-      const postImageCount = postImageCountText
-        ? parseInt(postImageCountText, 10)
-        : null;
+        null;     
       const rank = index ++;
 
       items.push({
-        thumbnailImageUrl,
-        siteName,
-        siteUrl,
-        isBlog,
-        issueDate,
         postTitle,
-        postUrl,
-        postContent,
-        postImageCount,
         rank,
       });
     });
@@ -102,6 +76,13 @@ async function fetchAllDetailSerpData(
   return items;
 }
 
+
+/**
+ * Extract SmartBlocks and PopularTopics from the HTML.
+ * @param html - The HTML content to parse.
+ * @param url - The URL of the page.
+ * @returns An object containing SmartBlocks and PopularTopics.
+ */
 function extractSmartBlocks(
   html: string,
   url: string,
@@ -113,6 +94,8 @@ function extractSmartBlocks(
   const $ = cheerio.load(html);
   const smartBlocks: SmartBlock[] = [];
   const popularTopics: PopularTopicItem[] = [];
+  const basicBlockItems: SmartBlockItem[] = [];
+  let blockIndex = 0;
 
   const excludeValues = new Set([
     "VIEW",
@@ -137,215 +120,139 @@ function extractSmartBlocks(
     "오디오클립",
   ]);
 
-  // Process `div.api_subject_bx` blocks
-  // 모든 블록 title 추출 div.api_subject_bx
-  $("div.fds-collection-root").each((_, blockElement) => {
-    const type =
-    $(blockElement).find(".fds-comps-header-headline").text().trim() ||
-    $(blockElement).find('.mod_title_area .title_wrap h2.title').text().trim() ||
-    null;
-  
+  // ✅ main_pack 내에서 api_subject_bx만 선택
+  $("div.main_pack").find("div.api_subject_bx").each((_, blockElement) => {
+    const $block = $(blockElement);
 
-    // Skip excluded titles
-    if (!type || excludeValues.has(type)) return;
+    const headlineType = $block
+      .find("span.fds-comps-header-headline")
+      .text()
+      .trim() || null;
 
-    // Process Popular Topics 
-    if (type.includes("인기주제")) {
-      $(blockElement)
-        .find(".fds-comps-keyword-chip")
-        .each((_, topicElement) => {
-          const topicTitle = $(topicElement)
-            .find(".fds-comps-keyword-chip-text")
-            .text()
-            .trim() || null;
-          const thumbnailImageUrl = $(topicElement)
-            .find(".fds-comps-keyword-chip-image")
-            .attr("src") || null;
-          const detailSerpUrl = $(topicElement).attr("href") ||
-            null;
+    const modTitleType = $block
+      .find(".mod_title_area .title_wrap h2.title")
+      .text()
+      .trim() || null;
 
-          if (topicTitle) {
-            popularTopics.push({
-              title: topicTitle,
-              thumbnailImageUrl,
-              detailSerpUrl,
-            });
-          }
-        });
-      return;
-    }
+    const apiTitleType = $block
+      .find("h3.api_title")
+      .text()
+      .trim() || null;
+
+    const feedHeaderType = $block
+      .find("h2.fds-feed-header-title")
+      .text()
+      .trim() || null;
+
+    const lstTotalType = $block
+      .find("ul.lst_total")
+      .length > 0
+      ? "웹사이트"
+      : null;
+
+    let type = headlineType || modTitleType || apiTitleType || feedHeaderType || lstTotalType;
+
+    blockIndex++; // Increment block index
+
 
     const items: SmartBlockItem[] = [];
 
     $(blockElement)
-      .find("div.fds-ugc-block-mod")
+      .find("li.bx") // `bx` 클래스를 가진 모든 li 요소 선택
       .each((index, itemElement) => {
-        const thumbnailImageUrl =
-          $(itemElement).find(".fds-thumb-small img").attr("src") || null;
-        const siteName =
-          $(itemElement).find(".fds-info-inner-text span").text() || null;
-        const siteUrl =
-          $(itemElement).find(".fds-info-inner-text").attr("href") || null;
-        const isBlog = siteUrl?.includes("blog") ?? false;
-        const issueDate =
-          $(itemElement).find(".fds-info-sub-inner-text").text() || null;
+        const $item = $(itemElement);
+    
+        // 광고 여부 확인 (type_ad 클래스가 있는지 확인)
+        if ($item.hasClass('type_ad')) {
+          return; // 광고 게시글은 스킵
+        }
+    
+        // 제목 스크래핑
         const postTitle =
-          $(itemElement)
+          $item
             .find(".fds-comps-right-image-text-title span")
             .text()
             .trim() || // 첫 번째 방식: span 안의 텍스트 추출
-          $(itemElement)
+          $item
             .find("span.fds-comps-right-image-text-title")
             .contents()
             .text()
             .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-          null;      
-        const postUrl = $(itemElement)
-          .find(".fds-comps-right-image-text-title")
-          .attr("href") || null;
-        const postContent = $(itemElement)
-          .find(".fds-comps-right-image-text-content span")
-          .text() || null;
-        const postImageCountText = $(itemElement)
-          .find(".fds-comps-right-image-content-image-badge span")
-          .text();
-        const postImageCount = postImageCountText
-          ? parseInt(postImageCountText, 10)
-          : null;
-        const rank = index + 1;
+          $item
+            .find("div.title_area > a")
+            .text()
+            .trim() || 
+            null; // 세 번째 방식: title_area 안의 a 태그 추출
+    
+        // postTitle이 null이거나 빈 문자열인 경우 스킵
+        if (!postTitle) {
+          console.log("⚠️ 빈 제목 또는 null 제목 발견, 건너뜁니다.");
+          return;
+        }
+    
+        const rank = items.length + 1; // ✅ 유효한 항목만 카운트하여 rank 부여
+    
 
         items.push({
-          thumbnailImageUrl,
-          siteName,
-          siteUrl,
-          isBlog,
-          issueDate,
           postTitle,
-          postUrl,
-          postContent,
-          postImageCount,
           rank,
         });
+        console.log(`SmartBlockItem 추가: ${postTitle} (순위: ${rank})`);
       });
 
     // Extract `moreButtonLink` for the Smart Block
     const moreButtonRawLink = $(blockElement)
       .find(".fds-comps-footer-more-button-container")
       .attr("data-lb-trigger") || null;
-    const moreButtonLink = `${url}#lb_api=${moreButtonRawLink}`;
-
-    // Add the Smart Block to the list
-    smartBlocks.push({ type, items, moreButtonLink, moreButtonRawLink });
-  });
-
-  // Process `api_subject_bx` blocks with "인기글" in the title
-  $("div.api_subject_bx").each((_, blockElement) => {
-    const type = $(blockElement)
-      .find(".mod_title_area > .title_wrap > .title")
-      .text()
-      .trim();
-
-    if (!type.includes("인기글")) return;
-
-    const items: SmartBlockItem[] = [];
-
-    $(blockElement)
-      .find(".view_wrap")
-      .each((index, itemElement) => {
-        const thumbnailImageUrl =
-          $(itemElement).find(".user_thumb img").attr("src") || null;
-        const siteName = $(itemElement).find(".user_info > a").text().trim() ||
-          null;
-        const siteUrl = $(itemElement).find("a.user_thumb").attr("href") ||
-          null;
-        const isBlog = siteUrl?.includes("blog") ?? false;
-        const issueDate = $(itemElement).find(".user_info > span.sub").text() ||
-          null;
-        const postTitle = $(itemElement)
-          .find(".title_area > a")
-          .text()
-          .trim() || null;
-        const postUrl = $(itemElement).find(".title_area > a").attr("href") ||
-          null;
-        const postContent = $(itemElement)
-          .find(".dsc_area > a")
-          .text()
-          .trim() || null;
-        const postImageCountText = $(itemElement)
-          .find(".thumb_link > span")
-          .text()
-          .trim();
-        const postImageCount = postImageCountText
-          ? parseInt(postImageCountText, 7)
-          : null;
-        const rank = index + 1;
-
-        items.push({
-          thumbnailImageUrl,
-          siteName,
-          siteUrl,
-          isBlog,
-          issueDate,
-          postTitle,
-          postUrl,
-          postContent,
-          postImageCount,
-          rank,
-        });
-      });
-
-    const moreButtonRawLink = $(blockElement)
-      .find(".mod_more_wrap > a")
-      .attr("data-lb-trigger") || null;
     const moreButtonLink = moreButtonRawLink
       ? `${url}#lb_api=${moreButtonRawLink}`
       : null;
 
-    smartBlocks.push({type, items, moreButtonLink, moreButtonRawLink });
-  });
-
-  // Process `total_wrap` blocks for basic blocks
-  const basicBlockItems: SmartBlockItem[] = [];
-
-  $(".spw_rerank.type_head._rra_head li.bx").each((index, parentElement) => {
-    const viewWrap = $(parentElement).find("div.view_wrap");
-
-    // Skip this block if `div.view_wrap` is not found
-    if (viewWrap.length === 0) {
-      return;
-    }
-
-    const thumbnailImageUrl = viewWrap.find(".user_thumb img").attr("src") ||
-      null;
-    const siteName = viewWrap.find(".user_info > a").text().trim() || null;
-    const siteUrl = viewWrap.find("a.user_thumb").attr("href") || null;
-    const isBlog = siteUrl?.includes("blog") ?? false;
-    const issueDate = viewWrap.find(".user_info > span.sub").text().trim() ||
-      null;
-    const postTitle = viewWrap.find(".title_area > a").text().trim() || null;
-    const postUrl = viewWrap.find(".title_area > a").attr("href") || null;
-    const postContent = viewWrap.find(".dsc_area > a").text().trim() || null;
-    const postImageCountText = viewWrap.find(".thumb_link > span.num").text()
-      .trim();
-    const postImageCount = postImageCountText
-      ? parseInt(postImageCountText, 10)
-      : null;
-
-    const rank = index + 1; // Assign the rank based on the parent element's index
-
-    basicBlockItems.push({
-      thumbnailImageUrl,
-      siteName,
-      siteUrl,
-      isBlog,
-      issueDate,
-      postTitle,
-      postUrl,
-      postContent,
-      postImageCount,
-      rank,
+    // Add the Smart Block to the list with current blockIndex as index
+    smartBlocks.push({ 
+      type, 
+      items, 
+      moreButtonLink, 
+      moreButtonRawLink, 
+      index: blockIndex 
     });
+
+    console.log(`SmartBlock 추가: ${type} (index: ${blockIndex})`);
   });
+
+  // Process blocks with "인기글" in the title and add items to existing smart blocks
+  $("div.api_subject_bx").each((_, blockElement) => {
+    const title = $(blockElement)
+      .find(".mod_title_area > .title_wrap > .title")
+      .text()
+      .trim();
+
+    if (!title.includes("인기글")) return;
+
+    // Find matching smart block by type
+    const existingBlock = smartBlocks.find(block => block.type === title);
+    if (!existingBlock) return;
+
+    // Add items to the existing block
+    $(blockElement)
+      .find(".view_wrap")
+      .each((index, itemElement) => {
+        const postTitle = $(itemElement)
+          .find(".title_area > a")
+          .text()
+          .trim() || null;
+        const rank = existingBlock.items.length + index + 1;
+
+        existingBlock.items.push({
+          postTitle,
+          rank,
+        });
+      });
+
+    console.log(`Added items to SmartBlock: ${title}`);
+    console.log(`Updated items: ${existingBlock.items.map(item => item.postTitle)}`);
+  });
+
 
   return { smartBlocks, popularTopics, basicBlock: basicBlockItems };
 }
@@ -356,11 +263,7 @@ export async function fetchSerpResults(
 ): Promise<SerpData | null> {
   console.log(`[ACTION] Fetching SERP results for keyword: ${keyword}`);
 
-  const url = `https://search.naver.com/search.naver?query=${
-    encodeURIComponent(
-      keyword,
-    )
-  }`;
+  const url = `https://search.naver.com/search.naver?query=${encodeURIComponent(keyword)}`;
 
   try {
     const response = await fetch(url, {
@@ -388,22 +291,20 @@ export async function fetchSerpResults(
         console.log(
           `[INFO] Fetching additional data for block: ${block.type}`,
         );
-        if(block.type?.includes("인플루언서")){
+        if (block.type?.includes("인플루언서")) {
           continue;
         }
         const additionalItems = await fetchAllDetailSerpData(
           block.moreButtonRawLink ?? "",
         );
         block.items.push(...additionalItems); // Append additional items to the block
- 
-
       }
     }
 
     return {
       smartBlocks,
       popularTopics,
-      basicBlock,
+      basicBlock, // 기본 블록은 빈 배열로 유지
     };
   } catch (error) {
     console.error(
@@ -412,3 +313,7 @@ export async function fetchSerpResults(
     return null;
   }
 }
+
+
+
+

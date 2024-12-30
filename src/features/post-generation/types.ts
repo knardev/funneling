@@ -96,6 +96,7 @@ export interface SmartBlock {
   items: SmartBlockItem[];
   moreButtonLink: string | null;
   moreButtonRawLink: string | null;
+  index: number;
 }
 
 export interface PopularTopicItem {
