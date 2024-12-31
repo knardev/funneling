@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
-import { Analysis, SerpData, SmartBlockItem, SmartBlock,ScrapingResults } from "../types";
+import { Analysis, SerpData, SmartBlockItem, SmartBlock, ScrapingResults } from "../types";
+import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 
 export function TitlePanel() {
   // Input states
@@ -22,15 +23,16 @@ export function TitlePanel() {
     target_needs: null,
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
-// State 수정
-const [strictTitles, setStrictTitles] = useState<string[]>([]);
-const [creativeTitles, setCreativeTitles] = useState<string[]>([]);
-const [styleTitles, setStyleTitles] = useState<string[]>([]);
+
+  // State 수정
+  const [strictTitles, setStrictTitles] = useState<string[]>([]);
+  const [creativeTitles, setCreativeTitles] = useState<string[]>([]);
+  const [styleTitles, setStyleTitles] = useState<string[]>([]);
   const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
-  const [serpdata, setserpdata] = useState<SerpData>({
+  const [serpdata, setSerpdata] = useState<SerpData>({
     smartBlocks: [],
   });
-  const [isScrapingLoading, setIsScrapingLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // 통합 로딩 상태
   const [scrapingResults, setScrapingResults] = useState<ScrapingResults>([]);
 
   // Debug log state
@@ -44,10 +46,22 @@ const [styleTitles, setStyleTitles] = useState<string[]>([]);
     ]);
   };
 
-  const handleScraping = async () => {
-    updateLog("네이버 검색 결과 스크래핑 시작...");
-    setIsScrapingLoading(true);
+
+  // 통합 핸들러: 스크래핑 후 제목 생성
+  const handleScrapeAndGenerateTitle = async () => {
+    updateLog("스크래핑 및 제목 생성 프로세스 시작...");
+    setIsLoading(true);
+    handleResetStates(); // 상태 초기화
+
     try {
+      // 1. 초기화 실행
+      updateLog("초기화 중...");
+      const initResult = await initializeContent(mainkeyword);
+      setSubKeywordlist(initResult.subkeywordlist);
+      updateLog(`콘텐츠 초기화됨`);
+
+      // 2. 스크래핑 시작
+      updateLog("네이버 검색 결과 스크래핑 시작...");
       const response = await fetch("/api/scrapping-serp-results", {
         method: "POST",
         headers: {
@@ -55,40 +69,38 @@ const [styleTitles, setStyleTitles] = useState<string[]>([]);
         },
         body: JSON.stringify({ keyword: mainkeyword }),
       });
-  
+
       if (!response.ok) {
         throw new Error(`스크래핑 실패: ${response.status}`);
       }
-  
+
       const { smartBlocks } = await response.json();
-  
+
       if (!smartBlocks || smartBlocks.length === 0) {
         updateLog("스크래핑 결과가 없습니다.");
         return;
       }
-  
+
       const validSmartBlocks = smartBlocks.filter(
         (block: SmartBlock) =>
           block.items &&
           block.items.length > 0 &&
           block.items.some((item) => item.postTitle !== null)
       );
-  
-      setserpdata({ smartBlocks: validSmartBlocks });
-  
+
+      setSerpdata({ smartBlocks: validSmartBlocks });
+
       // ✅ 그룹화된 구조로 변환
       const groupedResults = validSmartBlocks.reduce(
         (
           acc: { index: number; type: string; scrapedtitle: { rank: number; postTitle: string }[] }[],
           block: SmartBlock
         ) => {
-          // 기존 그룹 찾기
           let existingGroup = acc.find(
             (group) => group.index === block.index && group.type === block.type
           );
-  
+
           if (!existingGroup) {
-            // 그룹이 없다면 새로 추가
             existingGroup = {
               index: block.index,
               type: block.type || "알 수 없는 타입",
@@ -96,8 +108,7 @@ const [styleTitles, setStyleTitles] = useState<string[]>([]);
             };
             acc.push(existingGroup);
           }
-  
-          // scrapedtitle에 item 추가
+
           block.items.forEach((item: SmartBlockItem) => {
             if (item.postTitle) {
               existingGroup.scrapedtitle.push({
@@ -106,60 +117,50 @@ const [styleTitles, setStyleTitles] = useState<string[]>([]);
               });
             }
           });
-  
+
           return acc;
         },
         []
       );
-  
+
       console.log("groupedResults:", JSON.stringify(groupedResults, null, 2));
       setScrapingResults(groupedResults);
-  
+
       updateLog(
         `스크래핑 완료: ${validSmartBlocks.length}개 섹션 발견, ${groupedResults.length}개 그룹화됨`
       );
+
+      // 3. 제목 생성 시작
+      updateLog("제목 생성 시작...");
+      const generateResult = await generateTitle(
+        mainkeyword,
+        initResult.subkeywordlist,
+        groupedResults,
+        initResult.serviceanalysis
+      );
+      console.log("selected_subkeywords:", generateResult.selected_subkeywords);
+
+      setStrictTitles(generateResult.optimizedTitles.strict_structure || []);
+      setCreativeTitles(generateResult.optimizedTitles.creative_structure || []);
+      setStyleTitles(generateResult.optimizedTitles.style_patterns || []);
+      setSubKeywords(generateResult.selected_subkeywords || []);
+      setExtractedTitles(generateResult.extractedTitles || []);
+
+      console.log("제목 생성 결과:", generateResult);
+      updateLog("제목 생성 완료");
     } catch (error) {
-      console.error("스크래핑 중 오류:", error);
+      console.error("프로세스 중 오류:", error);
       updateLog(
         `오류 발생: ${
           error instanceof Error ? error.message : "알 수 없는 오류"
         }`
       );
     } finally {
-      setIsScrapingLoading(false);
+      setIsLoading(false);
     }
   };
-  
-// 제목 생성 핸들러
-const handleGenerateTitle = async () => {
-  updateLog("제목 생성 시작...");
-  try {
-    const result = await generateTitle(
-      mainkeyword,
-      subkeywordlist,
-      scrapingResults,
-      serviceAnalysis
-    );
 
-    // strict와 creative 제목을 별도로 저장
-    setStrictTitles(result.optimizedTitles.strict_structure || []);
-    setCreativeTitles(result.optimizedTitles.creative_structure || []);
-    setStyleTitles(result.optimizedTitles.style_patterns || []);
-    setSubKeywords(result.selected_subkeywords || []);
-    setExtractedTitles(result.extractedTitles || []);
-
-    console.log("제목 생성 결과:", result);
-    updateLog("제목 생성 완료");
-  } catch (error) {
-    console.error("제목 생성 중 오류:", error);
-    updateLog(
-      `오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
-    );
-  }
-};
-
-
-  // Reset states 함수 수정
+  // Reset states 함수
   const handleResetStates = () => {
     setMainKeyword("");
     setSubKeywords([]);
@@ -169,7 +170,8 @@ const handleGenerateTitle = async () => {
     setStyleTitles([]);
     setExtractedTitles([]);
     setDebugLogs([]);
-    setserpdata({ smartBlocks: []});
+    setSerpdata({ smartBlocks: [] });
+    setScrapingResults([]);
   };
 
   return (
@@ -187,18 +189,29 @@ const handleGenerateTitle = async () => {
               />
             </div>
             <div className="flex flex-wrap gap-2">
+              {/* 통합 버튼으로 변경 */}
               <Button
-                onClick={handleScraping}
-                disabled={isScrapingLoading}
+                onClick={handleScrapeAndGenerateTitle}
+                disabled={isLoading}
                 variant="outline"
               >
-                {isScrapingLoading ? "스크래핑 중..." : "스마트블록 추출"}
+                {isLoading ? "스크래핑 및 생성 중..." : "스크래핑 및 제목 생성"}
               </Button>
-              <Button onClick={handleGenerateTitle}>제목 생성</Button>
               <Button onClick={handleResetStates} variant="secondary">
                 초기화
               </Button>
             </div>
+            {/* 디버그 로그 표시 (선택 사항) */}
+            {/* {debugLogs.length > 0 && (
+              <div className="mt-4">
+                <h3 className="font-bold">디버그 로그:</h3>
+                <ul className="list-disc pl-5">
+                  {debugLogs.map((log, index) => (
+                    <li key={index}>{log}</li>
+                  ))}
+                </ul>
+              </div>
+            )} */}
           </div>
         </ResizablePanel>
         <ResizableHandle className="bg-slate-300" />
@@ -215,37 +228,35 @@ const handleGenerateTitle = async () => {
             <h2>
               상위 패턴 제목:
               {strictTitles.length > 0 &&
-                strictTitles.map((strictTitles, index) => (
+                strictTitles.map((title, index) => (
                   <div key={index}>
-                    {index + 1}. {strictTitles}
+                    {index + 1}. {title}
                   </div>
                 ))}
             </h2>
             <h2>
               서브키워드 활용 제목:
               {creativeTitles.length > 0 &&
-                creativeTitles.map((creativeTitle, index) => (
+                creativeTitles.map((title, index) => (
                   <div key={index}>
-                    {index + 1}. {creativeTitle}
+                    {index + 1}. {title}
                   </div>
                 ))}
             </h2>
             <h2>
-              <h2>
-                결핍 자극 제목:
-                {styleTitles.length > 0 &&
-                  styleTitles.map((styleTitle, index) => (
-                    <div key={index}>
-                      {index + 1}. {styleTitle}
-                    </div>
-                  ))}
-              </h2>
+              결핍 자극 제목:
+              {styleTitles.length > 0 &&
+                styleTitles.map((title, index) => (
+                  <div key={index}>
+                    {index + 1}. {title}
+                  </div>
+                ))}
             </h2>
             <hr />
             <br />
             <div>
               <h2 className="text-lg font-bold mb-4">키워드 검색 결과 상위 노출 순서</h2>
-                {serpdata.smartBlocks.map((block: SmartBlock) => (
+              {serpdata.smartBlocks.map((block: SmartBlock) => (
                 <div key={block.index} className="mb-4">
                   <h3 className="font-bold text-md">
                     {block.index}번째 탭: {block.type || "알 수 없는 타입"}
@@ -264,7 +275,6 @@ const handleGenerateTitle = async () => {
                   <br />
                 </div>
               ))}
-
             </div>
           </div>
         </ResizablePanel>

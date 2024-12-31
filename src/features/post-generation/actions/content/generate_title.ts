@@ -1,16 +1,11 @@
 "use server";
 
-import { TitleResponse, Analysis, ScrapingResults } from "../../types";
+import { TitleResponse,ImportanceTitles, Analysis, ScrapingResults } from "../../types";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
 import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-type ImportanceTitles = {
-  high: string[];
-  middle: string[];
-  low: string[];
-};
 
 /**
  * 개별 블록을 처리하여 중요도에 따라 제목을 분류
@@ -76,12 +71,13 @@ async function processBlock(
     titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis),
     titlePrompt.system
   );
-
+  console.log("selected_subkeywords:", response.selected_subkeywords);
   return {
     blockType: type,
     strictTitle: response.optimized_titles.strict_structure,
     creativeTitle: response.optimized_titles.creative_structure,
-    styleTitle: response.optimized_titles.style_patterns
+    styleTitle: response.optimized_titles.style_patterns,
+    block_subkeywords: response.selected_subkeywords
   };
 }
 
@@ -105,6 +101,7 @@ export async function generateTitle(
 
       const mainkeyword = keyword;
       const subkeywords = subkeywordlist || [];
+      const selected_subkeywords: string[] = [];
 
       const extractedTitles: string[] = [];
       const strictTitles: string[] = [];
@@ -119,10 +116,11 @@ export async function generateTitle(
         strictTitles.push(blockResult.strictTitle);
         creativeTitles.push(blockResult.creativeTitle);
         styleTitles.push(blockResult.styleTitle);
+        selected_subkeywords.push(...blockResult.block_subkeywords);
       }
-
+        console.log("subkeywords:", selected_subkeywords);
       return {
-        selected_subkeywords: Array.from(new Set(subkeywords)), // 중복 제거
+        selected_subkeywords: Array.from(new Set(selected_subkeywords)), // 중복 제거
         optimizedTitles: {
           strict_structure: strictTitles,
           creative_structure: creativeTitles,
@@ -130,6 +128,7 @@ export async function generateTitle(
         },
         extractedTitles
       };
+      
     } catch (error) {
       retryCount++;
       console.error(`에러 발생 (시도 ${retryCount}/${MAX_RETRIES}):`, error);
@@ -150,6 +149,8 @@ export async function generateTitle(
       await wait(RETRY_DELAY);
     }
   }
+  
+
 
   return {
     selected_subkeywords: [],
@@ -160,4 +161,72 @@ export async function generateTitle(
     },
     extractedTitles: []
   };
+}
+
+
+function extractTopKeywords(titles: string[]): string[] {
+  if (!titles || !titles.length) {
+    return [];
+  }
+
+  // 불용어 목록
+  const stopWords = new Set([
+    // 일반적인 조사/접속사
+    '및', '의', '후', '이', '그', '저', '것', '수', 
+    '을', '를', '이', '가', '과', '와', '는', '에', '께',
+    // 일반적인 동사/형용사
+    '있다', '없다', '하다', '되다', '이다',
+    // 특수문자와 숫자
+    ...'1234567890!@#$%^&*()'.split(''),
+    // 일반적인 접두어/접미어
+    '재', '적', '성', '화', '들'
+  ]);
+
+  const cleanText = (text: string): string => {
+    return text
+      // HTML 태그 제거
+      .replace(/<[^>]*>/g, '')
+      // 이모지 및 특수 문자 제거 (수정된 부분)
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]|[\uE000-\uF8FF]/g, '')
+      // 중괄호로 둘러싸인 내용 제거
+      .replace(/\{.*?\}/g, '')
+      // 대괄호로 둘러싸인 내용 제거
+      .replace(/\[.*?\]/g, '')
+      // URL 제거
+      .replace(/https?:\/\/\S+/g, '')
+      // 특수문자를 공백으로 변경
+      .replace(/[^\w\s가-힣]/g, ' ')
+      // 연속된 공백을 하나로 축소
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const wordCounts: Record<string, number> = {};
+  const processedTitles = titles.map(cleanText);
+
+  processedTitles.forEach(title => {
+    // 한글, 영문자로 구성된 단어 추출
+    const words = title.match(/[\w가-힣]+/g) || [];
+    
+    words.forEach(word => {
+      // 단어 정제 조건
+      if (
+        word &&
+        word.length >= 2 && // 2글자 이상
+        !stopWords.has(word) && // 불용어 제외
+        !/^\d+$/.test(word) && // 숫자로만 이루어진 문자열 제외
+        !(/^[a-zA-Z]{1,2}$/.test(word)) // 1-2글자 영문자 제외
+      ) {
+        // 대소문자 구분 없이 처리
+        const normalizedWord = word.toLowerCase();
+        wordCounts[normalizedWord] = (wordCounts[normalizedWord] || 0) + 1;
+      }
+    });
+  });
+
+  // 빈도수 기준으로 상위 5개 키워드 추출
+  return Object.entries(wordCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 5)
+    .map(([word]) => word);
 }

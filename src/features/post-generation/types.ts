@@ -47,6 +47,12 @@ export interface TitleResponse {
 
 }
 
+export interface ImportanceTitles  {
+  high: string[];
+  middle: string[];
+  low: string[];
+};
+
 export interface PredictionInput {
   id: string;
   prompt: string;
