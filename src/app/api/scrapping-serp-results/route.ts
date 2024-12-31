@@ -20,12 +20,11 @@ export async function POST(request: Request) {
     if (!result) {
       return NextResponse.json({ error: 'No results found' }, { status: 404 });
     }
-    const {smartBlocks, popularTopics, basicBlock} = result;
+    const {smartBlocks} = result;
 
     return NextResponse.json({ 
       smartBlocks,
-      popularTopics,
-      basicBlock,
+
      });
   } catch (error) {
     console.error('Scraping error:', error);

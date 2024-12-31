@@ -11,8 +11,11 @@ import type { Element } from "domhandler";
  */
 async function fetchAllDetailSerpData(
   moreButtonLink: string,
+  smartBlockItems: SmartBlockItem[],
 ): Promise<SmartBlockItem[]> {
-  const start = 4;
+  const start = smartBlockItems.length >0
+  ? smartBlockItems[smartBlockItems.length - 1].rank + 1
+  : 1;
   const items: SmartBlockItem[] = [];
 
   // Construct the URL with the updated start parameter
@@ -45,25 +48,76 @@ async function fetchAllDetailSerpData(
     const html = collection[0].html;
     const $ = cheerio.load(html);
 
-    $("div.fds-ugc-block-mod").each((index, itemElement) => {
-        $(itemElement).find(".fds-info-sub-inner-text").text() || null;
-        const postTitle =
-        $(itemElement)
-          .find(".fds-comps-right-image-text-title span")
-          .text()
-          .trim() || // 첫 번째 방식: span 안의 텍스트 추출
-        $(itemElement)
-          .find("span.fds-comps-right-image-text-title")
-          .contents()
-          .text()
-          .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-        null;     
-      const rank = index ++;
+    //블로그 제목 스크래핑 유형 1
 
+    $("li.bx").each((index, itemElement) => {
+      const $item = $(itemElement);
+
+      // Check for advertisement indicators by class names
+      const classes = $item.attr('class') || '';
+      const hasAd = classes.includes('type_ad') || 
+            classes.includes('_fe_view_power_content') ||
+            $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
+            $item.find("i.spview.ico_ad").length > 0;
+      
+      // Skip if it's an advertisement
+      if (hasAd) {
+      return;
+      }
+
+
+      const postTitle =
+      $item.find(".title_area > a")
+        .text()
+        .trim() || // 첫 번째 방식: span 안의 텍스트 추출
+      $item.find("span.fds-comps-right-image-text-title")
+        .contents()
+        .text()
+        .trim() || // 두 번째 방식: span 자체의 텍스트 추출
+      null;     
+    
+      // Only add items with valid titles
+      if (postTitle) {
+      const rank = items.length + 1; // Use current items length for correct ranking
       items.push({
         postTitle,
         rank,
       });
+      }
+    });
+
+    //블로그 제목 스크래핑 유형 2
+    $("div.fds-ugc-block-mod").each((index, itemElement) => {
+      const $item = $(itemElement);
+      
+      // Check for advertisement indicators
+      const hasAd = $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
+             $item.find("i.spview.ico_ad").length > 0;
+      
+      // Skip if it's an advertisement
+      if (hasAd) {
+      return;
+      }
+
+      const infoText = $item.find(".fds-info-sub-inner-text").text() || null;
+      const postTitle =
+      $item.find(".fds-comps-right-image-text-title span")
+        .text()
+        .trim() || // 첫 번째 방식: span 안의 텍스트 추출
+      $item.find("span.fds-comps-right-image-text-title")
+        .contents()
+        .text()
+        .trim() || // 두 번째 방식: span 자체의 텍스트 추출
+      null;     
+
+      // Only add items with valid titles
+      if (postTitle) {
+      const rank = items.length + 1; // Use current items length for correct ranking
+      items.push({
+        postTitle,
+        rank,
+      });
+      }
     });
 
     console.log(`[INFO] Fetched ${items.length} items so far.`);
@@ -88,13 +142,10 @@ function extractSmartBlocks(
   url: string,
 ): {
   smartBlocks: SmartBlock[];
-  popularTopics: PopularTopicItem[];
-  basicBlock: SmartBlockItem[];
 } {
   const $ = cheerio.load(html);
   const smartBlocks: SmartBlock[] = [];
-  const popularTopics: PopularTopicItem[] = [];
-  const basicBlockItems: SmartBlockItem[] = [];
+
   let blockIndex = 0;
 
   const excludeValues = new Set([
@@ -150,7 +201,7 @@ function extractSmartBlocks(
       ? "웹사이트"
       : null;
 
-    let type = headlineType || modTitleType || apiTitleType || feedHeaderType || lstTotalType;
+    const type = headlineType || modTitleType || apiTitleType || feedHeaderType || lstTotalType;
 
     blockIndex++; // Increment block index
 
@@ -162,9 +213,14 @@ function extractSmartBlocks(
       .each((index, itemElement) => {
         const $item = $(itemElement);
     
-        // 광고 여부 확인 (type_ad 클래스가 있는지 확인)
-        if ($item.hasClass('type_ad')) {
-          return; // 광고 게시글은 스킵
+          // Check for advertisement indicators
+          const hasAd = $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
+          $item.find("i.spview.ico_ad").length > 0 ||
+          $item.find("type_ad").length > 0;
+
+        // Skip if it's an advertisement
+        if (hasAd) {
+        return;
         }
     
         // 제목 스크래핑
@@ -186,7 +242,6 @@ function extractSmartBlocks(
     
         // postTitle이 null이거나 빈 문자열인 경우 스킵
         if (!postTitle) {
-          console.log("⚠️ 빈 제목 또는 null 제목 발견, 건너뜁니다.");
           return;
         }
     
@@ -201,9 +256,15 @@ function extractSmartBlocks(
       });
 
     // Extract `moreButtonLink` for the Smart Block
-    const moreButtonRawLink = $(blockElement)
+    const moreButtonRawLink = 
+    $(blockElement)
       .find(".fds-comps-footer-more-button-container")
-      .attr("data-lb-trigger") || null;
+      .attr("data-lb-trigger") ||
+
+     $(blockElement)
+      .find(".mod_more_wrap > a")
+      .attr("data-lb-trigger") || 
+       null;
     const moreButtonLink = moreButtonRawLink
       ? `${url}#lb_api=${moreButtonRawLink}`
       : null;
@@ -220,42 +281,9 @@ function extractSmartBlocks(
     console.log(`SmartBlock 추가: ${type} (index: ${blockIndex})`);
   });
 
-  // Process blocks with "인기글" in the title and add items to existing smart blocks
-  $("div.api_subject_bx").each((_, blockElement) => {
-    const title = $(blockElement)
-      .find(".mod_title_area > .title_wrap > .title")
-      .text()
-      .trim();
-
-    if (!title.includes("인기글")) return;
-
-    // Find matching smart block by type
-    const existingBlock = smartBlocks.find(block => block.type === title);
-    if (!existingBlock) return;
-
-    // Add items to the existing block
-    $(blockElement)
-      .find(".view_wrap")
-      .each((index, itemElement) => {
-        const postTitle = $(itemElement)
-          .find(".title_area > a")
-          .text()
-          .trim() || null;
-        const rank = existingBlock.items.length + index + 1;
-
-        existingBlock.items.push({
-          postTitle,
-          rank,
-        });
-      });
-
-    console.log(`Added items to SmartBlock: ${title}`);
-    console.log(`Updated items: ${existingBlock.items.map(item => item.postTitle)}`);
-  });
-
-
-  return { smartBlocks, popularTopics, basicBlock: basicBlockItems };
+  return { smartBlocks };
 }
+
 
 
 export async function fetchSerpResults(
@@ -280,7 +308,7 @@ export async function fetchSerpResults(
     }
 
     const html = await response.text();
-    const { smartBlocks, popularTopics, basicBlock } = extractSmartBlocks(
+    const { smartBlocks } = extractSmartBlocks(
       html,
       url,
     );
@@ -291,11 +319,9 @@ export async function fetchSerpResults(
         console.log(
           `[INFO] Fetching additional data for block: ${block.type}`,
         );
-        if (block.type?.includes("인플루언서")) {
-          continue;
-        }
         const additionalItems = await fetchAllDetailSerpData(
           block.moreButtonRawLink ?? "",
+          block.items
         );
         block.items.push(...additionalItems); // Append additional items to the block
       }
@@ -303,8 +329,6 @@ export async function fetchSerpResults(
 
     return {
       smartBlocks,
-      popularTopics,
-      basicBlock, // 기본 블록은 빈 배열로 유지
     };
   } catch (error) {
     console.error(

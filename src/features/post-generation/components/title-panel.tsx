@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
-import { Analysis, SerpData, SmartBlockItem, SmartBlock } from "../types";
+import { Analysis, SerpData, SmartBlockItem, SmartBlock,ScrapingResults } from "../types";
 
 export function TitlePanel() {
   // Input states
@@ -22,14 +22,16 @@ export function TitlePanel() {
     target_needs: null,
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
-  const [titles, setTitles] = useState<string[]>([]);
+// State 수정
+const [strictTitles, setStrictTitles] = useState<string[]>([]);
+const [creativeTitles, setCreativeTitles] = useState<string[]>([]);
+const [styleTitles, setStyleTitles] = useState<string[]>([]);
   const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
   const [serpdata, setserpdata] = useState<SerpData>({
     smartBlocks: [],
-    popularTopics: [],
-    basicBlock: [],
   });
   const [isScrapingLoading, setIsScrapingLoading] = useState(false);
+  const [scrapingResults, setScrapingResults] = useState<ScrapingResults>([]);
 
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -42,7 +44,6 @@ export function TitlePanel() {
     ]);
   };
 
-  // 스크래핑 핸들러
   const handleScraping = async () => {
     updateLog("네이버 검색 결과 스크래핑 시작...");
     setIsScrapingLoading(true);
@@ -54,72 +55,121 @@ export function TitlePanel() {
         },
         body: JSON.stringify({ keyword: mainkeyword }),
       });
-
+  
       if (!response.ok) {
         throw new Error(`스크래핑 실패: ${response.status}`);
       }
-
-      const { smartBlocks, popularTopics, basicBlock } = await response.json();
-
+  
+      const { smartBlocks } = await response.json();
+  
       if (!smartBlocks || smartBlocks.length === 0) {
         updateLog("스크래핑 결과가 없습니다.");
         return;
       }
-
+  
       const validSmartBlocks = smartBlocks.filter(
         (block: SmartBlock) =>
           block.items &&
           block.items.length > 0 &&
-          block.items.some(item => item.postTitle !== null)
+          block.items.some((item) => item.postTitle !== null)
       );
-
-      setserpdata({
-        smartBlocks: validSmartBlocks,
-        popularTopics,
-        basicBlock,
-      });
-
-      updateLog(`스크래핑 완료: ${validSmartBlocks.length}개 섹션 발견`);
+  
+      setserpdata({ smartBlocks: validSmartBlocks });
+  
+      // ✅ 그룹화된 구조로 변환
+      const groupedResults = validSmartBlocks.reduce(
+        (
+          acc: { index: number; type: string; scrapedtitle: { rank: number; postTitle: string }[] }[],
+          block: SmartBlock
+        ) => {
+          // 기존 그룹 찾기
+          let existingGroup = acc.find(
+            (group) => group.index === block.index && group.type === block.type
+          );
+  
+          if (!existingGroup) {
+            // 그룹이 없다면 새로 추가
+            existingGroup = {
+              index: block.index,
+              type: block.type || "알 수 없는 타입",
+              scrapedtitle: [],
+            };
+            acc.push(existingGroup);
+          }
+  
+          // scrapedtitle에 item 추가
+          block.items.forEach((item: SmartBlockItem) => {
+            if (item.postTitle) {
+              existingGroup.scrapedtitle.push({
+                rank: item.rank,
+                postTitle: item.postTitle,
+              });
+            }
+          });
+  
+          return acc;
+        },
+        []
+      );
+  
+      console.log("groupedResults:", JSON.stringify(groupedResults, null, 2));
+      setScrapingResults(groupedResults);
+  
+      updateLog(
+        `스크래핑 완료: ${validSmartBlocks.length}개 섹션 발견, ${groupedResults.length}개 그룹화됨`
+      );
     } catch (error) {
       console.error("스크래핑 중 오류:", error);
       updateLog(
-        `오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+        `오류 발생: ${
+          error instanceof Error ? error.message : "알 수 없는 오류"
+        }`
       );
     } finally {
       setIsScrapingLoading(false);
     }
   };
+  
+// 제목 생성 핸들러
+const handleGenerateTitle = async () => {
+  updateLog("제목 생성 시작...");
+  try {
+    const result = await generateTitle(
+      mainkeyword,
+      subkeywordlist,
+      scrapingResults,
+      serviceAnalysis
+    );
 
-  // 제목 생성 핸들러
-  const handleGenerateTitle = async () => {
-    updateLog("제목 생성 시작...");
-    try {
-      const result = await generateTitle(
-        mainkeyword,
-        subkeywordlist,
-        serviceAnalysis
-      );
-      setTitles(result.optimizedTitles);
-      setSubKeywords(result.selected_subkeywords);
-      setExtractedTitles(result.extractedTitles);
-      updateLog("제목 생성 완료");
-    } catch (error) {
-      console.error("제목 생성 중 오류:", error);
-      updateLog(
-        `오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
-      );
-    }
-  };
+    // strict와 creative 제목을 별도로 저장
+    setStrictTitles(result.optimizedTitles.strict_structure || []);
+    setCreativeTitles(result.optimizedTitles.creative_structure || []);
+    setStyleTitles(result.optimizedTitles.style_patterns || []);
+    setSubKeywords(result.selected_subkeywords || []);
+    setExtractedTitles(result.extractedTitles || []);
+
+    console.log("제목 생성 결과:", result);
+    updateLog("제목 생성 완료");
+  } catch (error) {
+    console.error("제목 생성 중 오류:", error);
+    updateLog(
+      `오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+    );
+  }
+};
+
 
   // Reset states 함수 수정
   const handleResetStates = () => {
     setMainKeyword("");
     setSubKeywords([]);
     setSubKeywordlist(null);
-    setTitles([]);
+    setStrictTitles([]);
+    setCreativeTitles([]);
+    setStyleTitles([]);
     setExtractedTitles([]);
     setDebugLogs([]);
-    setserpdata({ smartBlocks: [], popularTopics: [], basicBlock: [] });
+    setserpdata({ smartBlocks: []});
   };
 
   return (
@@ -164,21 +214,32 @@ export function TitlePanel() {
             </h2>
             <h2>
               상위 패턴 제목:
-              {titles.length > 0 &&
-                titles.slice(0, 3).map((title, index) => (
+              {strictTitles.length > 0 &&
+                strictTitles.map((strictTitles, index) => (
                   <div key={index}>
-                    {index + 1}. {title}
+                    {index + 1}. {strictTitles}
                   </div>
                 ))}
             </h2>
             <h2>
               서브키워드 활용 제목:
-              {titles.length > 3 &&
-                titles.slice(3, 6).map((title, index) => (
+              {creativeTitles.length > 0 &&
+                creativeTitles.map((creativeTitle, index) => (
                   <div key={index}>
-                    {index + 1}. {title}
+                    {index + 1}. {creativeTitle}
                   </div>
                 ))}
+            </h2>
+            <h2>
+              <h2>
+                결핍 자극 제목:
+                {styleTitles.length > 0 &&
+                  styleTitles.map((styleTitle, index) => (
+                    <div key={index}>
+                      {index + 1}. {styleTitle}
+                    </div>
+                  ))}
+              </h2>
             </h2>
             <hr />
             <br />
@@ -187,13 +248,13 @@ export function TitlePanel() {
                 {serpdata.smartBlocks.map((block: SmartBlock) => (
                 <div key={block.index} className="mb-4">
                   <h3 className="font-bold text-md">
-                    {block.index + 1}번째 탭: {block.type || "알 수 없는 타입"}
+                    {block.index}번째 탭: {block.type || "알 수 없는 타입"}
                   </h3>
                   <div className="ml-4">
                     {block.items && block.items.length > 0 ? (
-                      block.items.map((item: SmartBlockItem, index: number) => (
-                        <p key={index}>
-                          {index + 1}. {item.postTitle || "제목 없음"}
+                      block.items.map((item: SmartBlockItem, rank: number) => (
+                        <p key={rank}>
+                          {rank + 1}. {item.postTitle || "제목 없음"}
                         </p>
                       ))
                     ) : (
