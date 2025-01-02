@@ -280,11 +280,11 @@ export function TitlePanel() {
                 {/* 검색 결과 섹션 */}
                 <div className="border-t pt-4 overflow-auto">
                   <h2 className="text-lg font-bold mb-2">검색 결과</h2>
-                  {serpdata.smartBlocks.map((block: any, index: number) => (
+                  {serpdata.smartBlocks.map((block: SmartBlock, index: number) => (
                     <div key={index} className="mb-4">
                       <h4 className="font-bold">{block.index}번째 탭: {block.type || "알 수 없는 타입"}</h4>
                       <ul className="list-disc ml-4">
-                        {block.items?.map((item: any, rank: number) => (
+                        {block.items?.map((item: SmartBlockItem, rank: number) => (
                           <li key={rank}>{rank + 1}. {item.postTitle || "제목 없음"}</li>
                         ))}
                       </ul>
