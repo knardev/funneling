@@ -3,6 +3,22 @@ import { SmartBlock, SmartBlockItem, PopularTopicItem, SerpData } from "@/featur
 import { Cheerio } from "cheerio";
 import type { Element } from "domhandler";
 
+function extractPostTitle($item: Cheerio<Element>): string | null {
+  if (
+    $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 ||
+    $item.find("i.spview.ico_ad").length > 0 ||
+    $item.attr("class")?.includes("type_ad")
+  ) {
+    return null;
+  }
+
+  return (
+    $item.find(".fds-comps-right-image-text-title span").text().trim() ||
+    $item.find("span.fds-comps-right-image-text-title").contents().text().trim() ||
+    $item.find(".title_area > a").text().trim() ||
+    null
+  );
+}
 
 /**
  * Fetch and parse all data from the moreButtonLink.
@@ -13,122 +29,72 @@ async function fetchAllDetailSerpData(
   moreButtonLink: string,
   smartBlockItems: SmartBlockItem[],
 ): Promise<SmartBlockItem[]> {
-  const start = smartBlockItems.length >0
-  ? smartBlockItems[smartBlockItems.length - 1].rank + 1
-  : 1;
+  const start = smartBlockItems.length > 0
+    ? smartBlockItems[smartBlockItems.length - 1].rank + 1
+    : 1;
   const items: SmartBlockItem[] = [];
-
-  // Construct the URL with the updated start parameter
   const url = new URL(moreButtonLink);
   url.searchParams.set("start", start.toString());
 
-  console.log(`[FETCH] Fetching data from URL: ${url}`);
-
   try {
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
-      },
-    });
-
-    if (!response.ok) {
-      console.error(`[ERROR] Failed to fetch data: ${response.status}`);
-    }
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
     const json = await response.json();
-    const collection = json?.dom?.collection || json?.collection;
+    const html = json?.dom?.collection?.[0]?.html || null;
+    if (!html) throw new Error("No valid HTML found in response.");
 
-    if (!collection || !collection[0]?.html) {
-      console.log("[INFO] No more data to fetch.");
-    }
-
-    // Parse the HTML to extract SmartBlockItems
-    const html = collection[0].html;
     const $ = cheerio.load(html);
 
-    //블로그 제목 스크래핑 유형 1
-
-    $("li.bx").each((index, itemElement) => {
+    /** ✅ 1. li.bx 요소에서 제목 스크래핑 **/
+    $("li.bx").each((_, itemElement) => {
       const $item = $(itemElement);
+      const postTitle = extractPostTitle($item);
 
-      // Check for advertisement indicators by class names
-      const classes = $item.attr('class') || '';
-      const hasAd = classes.includes('type_ad') || 
-            classes.includes('_fe_view_power_content') ||
-            $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
-            $item.find("i.spview.ico_ad").length > 0;
-      
-      // Skip if it's an advertisement
-      if (hasAd) {
-      return;
-      }
-
-
-      const postTitle =
-      $item.find(".title_area > a")
-        .text()
-        .trim() || // 첫 번째 방식: span 안의 텍스트 추출
-      $item.find("span.fds-comps-right-image-text-title")
-        .contents()
-        .text()
-        .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-      null;     
-    
-      // Only add items with valid titles
       if (postTitle) {
-      const rank = items.length + 1; // Use current items length for correct ranking
-      items.push({
-        postTitle,
-        rank,
-      });
+        items.push({ postTitle, rank: items.length + 1 });
       }
     });
 
-    //블로그 제목 스크래핑 유형 2
-    $("div.fds-ugc-block-mod").each((index, itemElement) => {
+    /** ✅ 2. ugc-block-mod 요소에서 제목 스크래핑 **/
+    $(".fds-ugc-block-mod ").each((_, itemElement) => {
       const $item = $(itemElement);
-      
-      // Check for advertisement indicators
-      const hasAd = $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
-             $item.find("i.spview.ico_ad").length > 0;
-      
-      // Skip if it's an advertisement
-      if (hasAd) {
-      return;
+
+      // 광고 필터링
+      if (
+        $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 ||
+        $item.find("i.spview.ico_ad").length > 0 ||
+        $item.attr("class")?.includes("type_ad")
+      ) {
+        return;
       }
 
-      const infoText = $item.find(".fds-info-sub-inner-text").text() || null;
+      // 제목과 URL 추출
       const postTitle =
-      $item.find(".fds-comps-right-image-text-title span")
-        .text()
-        .trim() || // 첫 번째 방식: span 안의 텍스트 추출
-      $item.find("span.fds-comps-right-image-text-title")
-        .contents()
-        .text()
-        .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-      null;     
+        $item.find(".fds-comps-right-image-text-title span").text().trim() ||
+        $item.find("span.fds-comps-right-image-text-title").contents().text().trim() ||
+        $item.find(".title_area > a").text().trim() ||
+        null;
 
-      // Only add items with valid titles
-      if (postTitle) {
-      const rank = items.length + 1; // Use current items length for correct ranking
-      items.push({
-        postTitle,
-        rank,
-      });
+      const postUrl = 
+        $item.find(".fds-comps-right-image-text-title").attr("href") ||
+        $item.find(".title_area > a").attr("href") ||
+        null;
+
+      // 네이버 블로그 URL 검증
+      if (postTitle ) {
+        items.push({ postTitle, rank: items.length + 1 });
       }
     });
 
-    console.log(`[INFO] Fetched ${items.length} items so far.`);
+    console.log(`[INFO] Fetched ${items.length} items.`);
   } catch (error) {
-    console.error(
-      `[ERROR] Error while fetching or processing data: ${error}`,
-    );
+    console.error(`[ERROR] Fetch failed: ${(error as Error).message}`);
   }
 
   return items;
 }
+
 
 
 /**
@@ -140,142 +106,113 @@ async function fetchAllDetailSerpData(
 function extractSmartBlocks(
   html: string,
   url: string,
-): {
-  smartBlocks: SmartBlock[];
-} {
+): { smartBlocks: SmartBlock[] } {
   const $ = cheerio.load(html);
   const smartBlocks: SmartBlock[] = [];
-
   let blockIndex = 0;
 
+  // ✅ 이미 처리된 api_subject_bx의 참조를 저장
+  const processedApiSubjects = new Set<string>();
+
   const excludeValues = new Set([
-    "VIEW",
-    "뉴스",
-    "FAQ",
-    "지식iN",
-    "지식백과",
-    "플레이스",
-    "이미지",
-    "동영상",
-    "파워링크",
-    "연관 검색어",
-    "비즈사이트",
-    "네이버 도서",
-    "방금 본 도서와 비슷한 도서",
-    "카페 중고거래",
-    "네이버쇼핑",
-    "방금 본 상품 연관 추천",
-    "국어사전",
-    "함께 많이 찾는",
-    "많이 본 지식백과",
-    "오디오클립",
+    "VIEW", "뉴스", "FAQ", "지식iN", "지식백과", "플레이스", "이미지", "동영상",
+    "파워링크", "연관 검색어", "비즈사이트", "네이버 도서", "방금 본 도서와 비슷한 도서",
+    "카페 중고거래", "네이버쇼핑", "방금 본 상품 연관 추천", "국어사전", "함께 많이 찾는",
+    "많이 본 지식백과", "오디오클립",
   ]);
 
-  // ✅ main_pack 내에서 api_subject_bx만 선택
-  $("div.main_pack").find("div.api_subject_bx").each((_, blockElement) => {
-    const $block = $(blockElement);
+  // ✅ 1. spw_rerank 처리
+  $("div.spw_rerank").each((_, spwElement) => {
+    const $spwBlock = $(spwElement);
+    const isHead = $spwBlock.hasClass("type_head") && $spwBlock.hasClass("_rra_head");
+    const isBody = $spwBlock.hasClass("_rra_body");
 
-    const headlineType = $block
-      .find("span.fds-comps-header-headline")
-      .text()
-      .trim() || null;
+    if (isHead || isBody) {
+      blockIndex++;
+      const type = "웹사이트"; // ✅ 블록 타입 설정
+      const items: SmartBlockItem[] = [];
 
-    const modTitleType = $block
-      .find(".mod_title_area .title_wrap h2.title")
-      .text()
-      .trim() || null;
-
-    const apiTitleType = $block
-      .find("h3.api_title")
-      .text()
-      .trim() || null;
-
-    const feedHeaderType = $block
-      .find("h2.fds-feed-header-title")
-      .text()
-      .trim() || null;
-
-    const lstTotalType = $block
-      .find("ul.lst_total")
-      .length > 0
-      ? "웹사이트"
-      : null;
-
-    const type = headlineType || modTitleType || apiTitleType || feedHeaderType || lstTotalType;
-
-    blockIndex++; // Increment block index
-
-
-    const items: SmartBlockItem[] = [];
-
-    $(blockElement)
-      .find("li.bx") // `bx` 클래스를 가진 모든 li 요소 선택
-      .each((index, itemElement) => {
+      // ✅ spw_rerank 내에서 postTitle 추출
+      $spwBlock.find("li.bx").each((index, itemElement) => {
         const $item = $(itemElement);
-    
-          // Check for advertisement indicators
-          const hasAd = $item.find("span.fds-ugc-gray70-ad-badge-text").length > 0 || 
-          $item.find("i.spview.ico_ad").length > 0 ||
-          $item.find("type_ad").length > 0;
-
-        // Skip if it's an advertisement
-        if (hasAd) {
-        return;
-        }
-    
-        // 제목 스크래핑
         const postTitle =
-          $item
-            .find(".fds-comps-right-image-text-title span")
-            .text()
-            .trim() || // 첫 번째 방식: span 안의 텍스트 추출
-          $item
-            .find("span.fds-comps-right-image-text-title")
-            .contents()
-            .text()
-            .trim() || // 두 번째 방식: span 자체의 텍스트 추출
-          $item
-            .find("div.title_area > a")
-            .text()
-            .trim() || 
-            null; // 세 번째 방식: title_area 안의 a 태그 추출
-    
-        // postTitle이 null이거나 빈 문자열인 경우 스킵
-        if (!postTitle) {
-          return;
-        }
-    
-        const rank = items.length + 1; // ✅ 유효한 항목만 카운트하여 rank 부여
-    
+          $item.find(".fds-comps-right-image-text-title span").text().trim() ||
+          $item.find("span.fds-comps-right-image-text-title").contents().text().trim() ||
+          $item.find(".title_area > a").text().trim() ||
+          null;
 
-        items.push({
-          postTitle,
-          rank,
-        });
-        console.log(`SmartBlockItem 추가: ${postTitle} (순위: ${rank})`);
+        if (postTitle) {
+          items.push({ postTitle, rank: items.length + 1 });
+
+          // ✅ 해당 api_subject_bx의 고유 selector를 기록
+          $item.parents("div.api_subject_bx").each((_, apiElement) => {
+            const apiId = $(apiElement).attr('id') || $.html(apiElement); // id가 없으면 html 문자열로 구분
+            processedApiSubjects.add(apiId);
+          });
+        }
       });
 
-    // Extract `moreButtonLink` for the Smart Block
-    const moreButtonRawLink = 
-    $(blockElement)
-      .find(".fds-comps-footer-more-button-container")
-      .attr("data-lb-trigger") ||
+      smartBlocks.push({
+        type,
+        items,
+        moreButtonLink: null,
+        moreButtonRawLink: null,
+        index: blockIndex,
+      });
 
-     $(blockElement)
-      .find(".mod_more_wrap > a")
-      .attr("data-lb-trigger") || 
-       null;
+      console.log(`SmartBlock (웹사이트) 추가: index ${blockIndex}`);
+    }
+  });
+
+  // ✅ 2. api_subject_bx 처리
+  $("div.api_subject_bx").each((_, blockElement) => {
+    const $block = $(blockElement);
+
+    // ✅ 이미 spw_rerank에서 처리된 api_subject_bx인지 확인
+    const apiId = $block.attr('id') || $.html($block); 
+    if (processedApiSubjects.has(apiId)) {
+      console.log(`[INFO] 이미 spw_rerank에서 처리된 api_subject_bx는 건너뜁니다.`);
+      return;
+    }
+
+    const type = $block
+      .find("span.fds-comps-header-headline").text().trim() ||
+      $block.find(".mod_title_area .title_wrap h2.title").text().trim() ||
+      $block.find("h3.api_title").text().trim() ||
+      $block.find("h2.fds-feed-header-title").text().trim() ||
+      ($block.find("ul.lst_total").length > 0 ? "웹사이트" : null);
+
+    blockIndex++;
+    const items: SmartBlockItem[] = [];
+
+    $block.find("li.bx").each((index, itemElement) => {
+      const $item = $(itemElement);
+      const postTitle =
+        $item.find(".fds-comps-right-image-text-title span").text().trim() ||
+        $item.find("span.fds-comps-right-image-text-title").contents().text().trim() ||
+        $item.find(".title_area > a").text().trim() ||
+        null;
+
+      if (postTitle) {
+        items.push({ postTitle, rank: items.length + 1 });
+      }
+    });
+
+    const moreButtonRawLink =
+      $block.find(".fds-comps-footer-more-button-container").attr("data-lb-trigger") ||
+      $block.find(".mod_more_wrap > a").attr("data-lb-trigger") ||
+      null;
+
     const moreButtonLink = moreButtonRawLink
       ? `${url}#lb_api=${moreButtonRawLink}`
       : null;
 
-    // Add the Smart Block to the list with current blockIndex as index
-    smartBlocks.push({ 
-      type, 
-      items, 
-      moreButtonLink, 
-      moreButtonRawLink, 
-      index: blockIndex 
+    smartBlocks.push({
+      type,
+      items,
+      moreButtonLink,
+      moreButtonRawLink,
+      index: blockIndex,
     });
 
     console.log(`SmartBlock 추가: ${type} (index: ${blockIndex})`);
@@ -283,6 +220,7 @@ function extractSmartBlocks(
 
   return { smartBlocks };
 }
+
 
 
 
