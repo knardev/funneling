@@ -3,6 +3,7 @@
 import { TitleResponse,ImportanceTitles, Analysis, ScrapingResults } from "../../types";
 import { makeOpenAiRequest } from "../../utils/ai/openai";
 import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
+import { title } from "process";
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -71,6 +72,7 @@ async function processBlock(
     titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis),
     titlePrompt.system
   );
+  console.log("titlePrompt:",titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis));
   console.log("selected_subkeywords:", response.selected_subkeywords);
   return {
     blockType: type,

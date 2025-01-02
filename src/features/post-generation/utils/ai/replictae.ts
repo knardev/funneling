@@ -5,7 +5,7 @@ export const REPLICATE_CONFIG = {
     API: {
       BASE_URL: "https://api.replicate.com/v1/models/black-forest-labs/flux-dev", 
       PREDICTIONS_ENDPOINT: "/predictions",
-      KEY: process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN, // 환경 변수에서 API 키 불러오기
+      KEY: process.env.REPLICATE_API_TOKEN, // 환경 변수에서 API 키 불러오기
       MODEL: "black-forest-labs/flux-dev", // 모델 이름 (엔드포인트 URL에 반영)
       MAX_WAIT_TIME: 300000, // 최대 대기 시간 (밀리초) - 5분
       RETRY_DELAY: 5000, // 재시도 간격 (밀리초) - 5초
