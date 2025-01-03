@@ -72,7 +72,6 @@ async function processBlock(
     titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis),
     titlePrompt.system
   );
-  console.log("titlePrompt:",titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis));
   console.log("selected_subkeywords:", response.selected_subkeywords);
   return {
     blockType: type,
@@ -110,27 +109,49 @@ export async function generateTitle(
       const creativeTitles: string[] = [];
       const styleTitles: string[] = [];
 
-      // 블록별 처리
-      for (const block of scrapingResults) {
-        const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
 
-        extractedTitles.push(...block.scrapedtitle.map(item => item.postTitle));
-        strictTitles.push(blockResult.strictTitle);
-        creativeTitles.push(blockResult.creativeTitle);
-        styleTitles.push(blockResult.styleTitle);
-        selected_subkeywords.push(...blockResult.block_subkeywords);
+      if (scrapingResults.length === 1) {
+        // ✅ scrapingResults에 블록이 하나일 경우
+        console.log("단일 블록 감지됨: 3번 반복 처리");
+
+        for (let i = 0; i < 3; i++) {
+          const block = scrapingResults[0]; // 첫 번째 블록을 3번 반복 처리
+          console.log(`반복 ${i + 1}:`, block);
+
+          const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
+
+          extractedTitles.push(...block.scrapedtitle.map(item => item.postTitle));
+          strictTitles.push(blockResult.strictTitle);
+          creativeTitles.push(blockResult.creativeTitle);
+          styleTitles.push(blockResult.styleTitle);
+          selected_subkeywords.push(...blockResult.block_subkeywords);
+        }
+      } else {
+        // ✅ scrapingResults에 블록이 여러 개일 경우
+        console.log("다중 블록 감지됨: 일반 처리");
+
+        for (const block of scrapingResults) {
+          const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
+
+          extractedTitles.push(...block.scrapedtitle.map(item => item.postTitle));
+          strictTitles.push(blockResult.strictTitle);
+          creativeTitles.push(blockResult.creativeTitle);
+          styleTitles.push(blockResult.styleTitle);
+          selected_subkeywords.push(...blockResult.block_subkeywords);
+        }
       }
-        console.log("subkeywords:", selected_subkeywords);
+
+      console.log("subkeywords:", selected_subkeywords);
+
       return {
         selected_subkeywords: Array.from(new Set(selected_subkeywords)), // 중복 제거
         optimizedTitles: {
           strict_structure: strictTitles,
           creative_structure: creativeTitles,
-          style_patterns: styleTitles
+          style_patterns: styleTitles,
         },
-        extractedTitles
+        extractedTitles,
       };
-      
     } catch (error) {
       retryCount++;
       console.error(`에러 발생 (시도 ${retryCount}/${MAX_RETRIES}):`, error);
@@ -142,28 +163,27 @@ export async function generateTitle(
           optimizedTitles: {
             strict_structure: [],
             creative_structure: [],
-            style_patterns: []
+            style_patterns: [],
           },
-          extractedTitles: []
+          extractedTitles: [],
         };
       }
 
       await wait(RETRY_DELAY);
     }
   }
-  
-
 
   return {
     selected_subkeywords: [],
     optimizedTitles: {
       strict_structure: [],
       creative_structure: [],
-      style_patterns: []
+      style_patterns: [],
     },
-    extractedTitles: []
+    extractedTitles: [],
   };
 }
+
 
 
 function extractTopKeywords(titles: string[]): string[] {

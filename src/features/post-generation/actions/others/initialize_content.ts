@@ -1,7 +1,7 @@
 "use server";
 
 import {naverUtils} from "../../utils/naver/naver";
-import { Analysis, Persona } from "../../types";
+import { Analysis, Persona,subkeywordlist } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 import { initialContentPrompt } from "../../prompts/initialcontentPrompt";
 
@@ -10,14 +10,14 @@ export async function initializeContent(
     persona?: Persona
   ):Promise<{
     serviceanalysis?: Analysis;
-    subkeywordlist: string[];
+    subkeywordlist: subkeywordlist;
   }>
 {
   if (!keyword) {
     throw new Error('키워드는 필수 데이터입니다.');
   }
 
-  const subkeywordlist:string[] = await getSearchData(keyword);
+  const subkeywordlist= await getSearchData(keyword);
   const response = { subkeywordlist};
   
   if(persona){
@@ -92,9 +92,8 @@ async function getSearchData(keyword: string) {
 
   const relatedTerms = processRelatedTerms(html1);
   const autocompleteTerms = await processAutocomplete(keyword);
-  const subkeywords = Array.from(new Set(relatedTerms.concat(autocompleteTerms)));
 
-  return subkeywords;
+  return {relatedTerms, autocompleteTerms};
 }
 
 async function extractAutocomplete(keyword: string) {

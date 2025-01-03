@@ -137,6 +137,11 @@ export interface ScrapingResult {
   scrapedtitle: ScrapedTitle[];
 }
 
+export interface subkeywordlist{
+  relatedTerms: string[];
+  autocompleteTerms: string[];
+}
+
 export type ScrapingResults = ScrapingResult[];
 
 

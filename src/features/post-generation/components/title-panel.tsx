@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
-import { Analysis, SerpData, SmartBlockItem, SmartBlock, ScrapingResults } from "../types";
+import {
+  Analysis,
+  SerpData,
+  SmartBlockItem,
+  SmartBlock,
+  ScrapingResults,
+} from "../types";
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 
 export function TitlePanel() {
@@ -27,44 +30,42 @@ export function TitlePanel() {
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [isResultReady, setIsResultReady] = useState(false);
 
-  // State 수정
+  // 제목 관련 상태
   const [strictTitles, setStrictTitles] = useState<string[]>([]);
   const [creativeTitles, setCreativeTitles] = useState<string[]>([]);
   const [styleTitles, setStyleTitles] = useState<string[]>([]);
   const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
-  const [serpdata, setSerpdata] = useState<SerpData>({
-    smartBlocks: [],
-  });
-  const [isLoading, setIsLoading] = useState(false); // 통합 로딩 상태
+
+  // 스크래핑 상태
+  const [serpdata, setSerpdata] = useState<SerpData>({ smartBlocks: [] });
   const [scrapingResults, setScrapingResults] = useState<ScrapingResults>([]);
 
-  // Debug log state
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  // 로딩
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Utility function to update logs
-  const updateLog = (message: string) => {
-    setDebugLogs((prevLogs) => [
-      ...prevLogs,
-      `${new Date().toISOString()}: ${message}`,
-    ]);
-  };
-
-
-  // 통합 핸들러: 스크래핑 후 제목 생성
+  // 스크래핑 + 제목 생성
   const handleScrapeAndGenerateTitle = async () => {
-    updateLog("스크래핑 및 제목 생성 프로세스 시작...");
     setIsLoading(true);
     setIsResultReady(false);
 
     try {
-      // 1. 초기화 실행
-      updateLog("초기화 중...");
+      // 1. 초기화
       const initResult = await initializeContent(mainkeyword);
-      setSubKeywordlist(initResult.subkeywordlist);
-      updateLog(`콘텐츠 초기화됨`);
+      if (
+        initResult.subkeywordlist.relatedTerms &&
+        initResult.subkeywordlist.relatedTerms.length > 0
+      ) {
+        setSubKeywordlist(initResult.subkeywordlist.relatedTerms);
+      } else if (
+        initResult.subkeywordlist.autocompleteTerms &&
+        initResult.subkeywordlist.autocompleteTerms.length > 0
+      ) {
+        setSubKeywordlist(initResult.subkeywordlist.autocompleteTerms);
+      } else {
+        setSubKeywordlist(null);
+      }
 
-      // 2. 스크래핑 시작
-      updateLog("네이버 검색 결과 스크래핑 시작...");
+      // 2. 스크래핑
       const response = await fetch("/api/scrapping-serp-results", {
         method: "POST",
         headers: {
@@ -78,9 +79,8 @@ export function TitlePanel() {
       }
 
       const { smartBlocks } = await response.json();
-
       if (!smartBlocks || smartBlocks.length === 0) {
-        updateLog("스크래핑 결과가 없습니다.");
+        setIsLoading(false);
         return;
       }
 
@@ -93,10 +93,14 @@ export function TitlePanel() {
 
       setSerpdata({ smartBlocks: validSmartBlocks });
 
-      // ✅ 그룹화된 구조로 변환
+      // 검색 결과 그룹화
       const groupedResults = validSmartBlocks.reduce(
         (
-          acc: { index: number; type: string; scrapedtitle: { rank: number; postTitle: string }[] }[],
+          acc: {
+            index: number;
+            type: string;
+            scrapedtitle: { rank: number; postTitle: string }[];
+          }[],
           block: SmartBlock
         ) => {
           let existingGroup = acc.find(
@@ -126,22 +130,17 @@ export function TitlePanel() {
         []
       );
 
-      console.log("groupedResults:", JSON.stringify(groupedResults, null, 2));
       setScrapingResults(groupedResults);
 
-      updateLog(
-        `스크래핑 완료: ${validSmartBlocks.length}개 섹션 발견, ${groupedResults.length}개 그룹화됨`
-      );
-
-      // 3. 제목 생성 시작
-      updateLog("제목 생성 시작...");
+      // 3. 제목 생성
       const generateResult = await generateTitle(
         mainkeyword,
-        initResult.subkeywordlist,
+        initResult.subkeywordlist.relatedTerms ||
+          initResult.subkeywordlist.autocompleteTerms ||
+          [],
         groupedResults,
         initResult.serviceanalysis
       );
-      console.log("selected_subkeywords:", generateResult.selected_subkeywords);
 
       setStrictTitles(generateResult.optimizedTitles.strict_structure || []);
       setCreativeTitles(generateResult.optimizedTitles.creative_structure || []);
@@ -149,152 +148,180 @@ export function TitlePanel() {
       setSubKeywords(generateResult.selected_subkeywords || []);
       setExtractedTitles(generateResult.extractedTitles || []);
 
-      console.log("제목 생성 결과:", generateResult);
-      setIsResultReady(true); // 결과 표시 상태 업데이트
-      updateLog("제목 생성 완료");
+      setIsResultReady(true);
     } catch (error) {
-      console.error("프로세스 중 오류:", error);
-      updateLog(
-        `오류 발생: ${
-          error instanceof Error ? error.message : "알 수 없는 오류"
-        }`
-      );
+      console.error("에러 발생:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  return (
+    <div className="h-full">
+      <ResizablePanelGroup direction="horizontal">
+        {/* 사이드바: 세로 스크롤 가능 */}
+        <ResizablePanel className="bg-gray-100 p-2 overflow-y-auto">
+          <ul className="space-y-1">
+            <li>
+              <a
+                href="/keywordextract"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+              >
+                키워드 생성
+              </a>
+            </li>
+            <li>
+              <a
+                href="/title"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+              >
+                제목 생성
+              </a>
+            </li>
+            <li>
+              <a
+                href="/trafficcontent"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+              >
+                컨텐츠 생성
+              </a>
+            </li>
+          </ul>
+        </ResizablePanel>
 
+        <ResizableHandle />
 
+        {/* 메인 패널: 세로 스크롤 가능 */}
+        <ResizablePanel
+          defaultSize={75}
+          maxSize={85}
+          className="p-4 flex flex-col gap-4 overflow-y-auto"
+        >
+          {/* 키워드 입력 */}
+          <div className="bg-white p-4 rounded-md shadow">
+            <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
 
-    return (
-      <div className="h-full">
-        <ResizablePanelGroup direction="horizontal">
-          {/* 사이드바 */}
-          <ResizablePanel defaultSize={3} minSize={3} maxSize={10} className="bg-gray-100 p-2">
-            <ul className="space-y-1">
-              <li>
-                <a href="/keywordextract" className="block px-2 py-1 rounded-md hover:bg-gray-200">
-                  키워드 생성
-                </a>
-              </li>
-              <li>
-                <a href="/title" className="block px-2 py-1 rounded-md hover:bg-gray-200">
-                  제목 생성
-                </a>
-              </li>
-              <li>
-                <a href="/trafficcontent" className="block px-2 py-1 rounded-md hover:bg-gray-200">
-                  컨텐츠 생성
-                </a>
-              </li>
-            </ul>
-          </ResizablePanel>
-  
-          <ResizableHandle />
-  
-          {/* 메인 콘텐츠 */}
-          <ResizablePanel defaultSize={75} maxSize={85} className="p-4 flex flex-col gap-4  overflow-auto">
-            {/* 키워드 입력 섹션 */}
-            <div className="mb-4">
-              <h2 className="text-lg font-bold mb-2">키워드</h2>
-                <div className="flex flex-col gap-2">
-                <Input
-                  placeholder="키워드를 입력하세요"
-                  value={mainkeyword}
-                  onChange={(e) => setMainKeyword(e.target.value)}
-                  onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+            <div className="flex flex-col gap-2">
+              <Input
+                placeholder="키워드를 입력하세요"
+                value={mainkeyword}
+                onChange={(e) => setMainKeyword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
                     handleScrapeAndGenerateTitle();
                   }
-                  }}
-                />
-                <Button
-                  onClick={handleScrapeAndGenerateTitle}
-                  disabled={isLoading}
-                  variant="default"
-                  className="w-full py-2 text-lg font-medium !important"
-                >
-                  {isLoading ? (
+                }}
+              />
+              <Button
+                onClick={handleScrapeAndGenerateTitle}
+                disabled={isLoading}
+                variant="default"
+                className="w-full py-2 text-lg font-medium"
+              >
+                {isLoading ? (
                   <>
-                  <span className="animate-spin mr-2">⚪</span>
-                  제목 생성 중...
+                    <span className="animate-spin mr-2">⚪</span>
+                    제목 생성 중...
                   </>
-                  ) : (
-                  '제목 생성하기'
-                  )}
-                </Button>
-                </div>
+                ) : (
+                  "제목 생성하기"
+                )}
+              </Button>
             </div>
-  
-            {/* 결과 섹션 (제목과 검색 결과 동시에 표시) */}
-            {isResultReady && (
-            <div className="overflow-auto max-h-[400px] border rounded-md p-4">
-                {/* Tabs 섹션 */}
-                <div className="border-b pb-4 mb-4">
-                  <Tabs defaultValue="strict">
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="strict">상위 패턴</TabsTrigger>
-                      <TabsTrigger value="creative">서브 키워드 활용</TabsTrigger>
-                      <TabsTrigger value="style">결핍 자극</TabsTrigger>
-                    </TabsList>
-  
-                    {/* 상위 패턴 제목 */}
-                    {strictTitles.length > 0 && (
-                      <TabsContent value="strict">
-                        <h3 className="font-bold mb-2">상위 패턴 제목</h3>
-                        <ul className="list-disc ml-4 space-y-1">
-                          {strictTitles.map((title, index) => (
-                            <li key={index}>{index + 1}. {title}</li>
-                          ))}
-                        </ul>
-                      </TabsContent>
-                    )}
-  
-                    {/* 서브 키워드 활용 제목 */}
-                    {creativeTitles.length > 0 && (
-                      <TabsContent value="creative">
-                        <h3 className="font-bold mb-2">서브 키워드 활용 제목</h3>
-                        <ul className="list-disc ml-4 space-y-1">
-                          {creativeTitles.map((title, index) => (
-                            <li key={index}>{index + 1}. {title}</li>
-                          ))}
-                        </ul>
-                      </TabsContent>
-                    )}
-  
-                    {/* 결핍 자극 제목 */}
-                    {styleTitles.length > 0 && (
-                      <TabsContent value="style">
-                        <h3 className="font-bold mb-2">결핍 자극 제목</h3>
-                        <ul className="list-disc ml-4 space-y-1">
-                          {styleTitles.map((title, index) => (
-                            <li key={index}>{index + 1}. {title}</li>
-                          ))}
-                        </ul>
-                      </TabsContent>
-                    )}
-                  </Tabs>
-                </div>
-  
-                {/* 검색 결과 섹션 */}
-                <div className="border-t pt-4 overflow-auto">
-                  <h2 className="text-lg font-bold mb-2">검색 결과</h2>
-                  {serpdata.smartBlocks.map((block: SmartBlock, index: number) => (
-                    <div key={index} className="mb-4">
-                      <h4 className="font-bold">{block.index}번째 탭: {block.type || "알 수 없는 타입"}</h4>
-                      <ul className="list-disc ml-4">
-                        {block.items?.map((item: SmartBlockItem, rank: number) => (
-                          <li key={rank}>{rank + 1}. {item.postTitle || "제목 없음"}</li>
+          </div>
+
+          {/* 결과 섹션 */}
+          {isResultReady && (
+            <>
+              {/* 제목 섹션: 가로 스크롤 */}
+              <div className="border rounded-md p-4">
+                <h2 className="text-lg font-bold mb-4">제목 추천</h2>
+                <div className="flex space-x-4 overflow-x-auto">
+                  {/* 상위 패턴 */}
+                  {strictTitles.length > 0 && (
+                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
+                      <h3 className="font-bold mb-2">상위 패턴 제목</h3>
+                      <ul className="list-disc ml-4 space-y-1">
+                        {strictTitles.map((title, index) => (
+                          <li key={index}>
+                            {index + 1}. {title}
+                          </li>
                         ))}
                       </ul>
                     </div>
-                  ))}
+                  )}
+
+                  {/* 서브 키워드 활용 */}
+                  {creativeTitles.length > 0 && (
+                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
+                      <h3 className="font-bold mb-2">서브 키워드 활용</h3>
+                      <ul className="list-disc ml-4 space-y-1">
+                        {creativeTitles.map((title, index) => (
+                          <li key={index}>
+                            {index + 1}. {title}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 결핍 자극 */}
+                  {styleTitles.length > 0 && (
+                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3">
+                      <h3 className="font-bold mb-2">결핍 자극 제목</h3>
+                      <ul className="list-disc ml-4 space-y-1">
+                        {styleTitles.map((title, index) => (
+                          <li key={index}>
+                            {index + 1}. {title}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
+
+                {/* 서브 키워드 */}
+                {subkeywordlist && subkeywordlist.length > 0 && (
+                  <div className="border-t mt-4 pt-3">
+                    <h3 className="font-bold mb-2">서브 키워드</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {subkeywordlist.map((keyword, index) => (
+                        <span
+                          key={index}
+                          className="inline-block px-4 py-1 bg-gray-200 text-sm rounded-md border border-gray-300 shadow-sm"
+                          style={{ backgroundColor: '#e5e7eb' }}
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    );
-  }
+
+              {/* 검색 결과 (스크래핑) */}
+              <div className="border-t pl-4 overflow-y-auto">
+                <h2 className="text-lg font-bold mb-2">검색 결과</h2>
+                {serpdata.smartBlocks.map((block: SmartBlock, i: number) => (
+                  <div key={i} className="mb-4">
+                    <h4 className="font-bold">
+                      {block.index}번째 탭: {block.type || "알 수 없는 타입"}
+                    </h4>
+                    <ul className="list-disc ml-4">
+                      {block.items?.map((item: SmartBlockItem, rank: number) => (
+                        <li key={rank}>
+                          {rank + 1}. {item.postTitle || "제목 없음"}
+                        </li>
+                      ))}
+                    </ul>
+                    <br></br>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+}
