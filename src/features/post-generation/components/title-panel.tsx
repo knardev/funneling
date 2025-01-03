@@ -166,6 +166,7 @@ export function TitlePanel() {
               <a
                 href="/keywordextract"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 키워드 생성
               </a>
@@ -174,6 +175,7 @@ export function TitlePanel() {
               <a
                 href="/title"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 제목 생성
               </a>
@@ -182,6 +184,7 @@ export function TitlePanel() {
               <a
                 href="/trafficcontent"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 컨텐츠 생성
               </a>

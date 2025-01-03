@@ -1,33 +1,14 @@
 "use server";
 
 import { TitleResponse,ImportanceTitles, Analysis, ScrapingResults } from "../../types";
-import { makeOpenAiRequest } from "../../utils/ai/openai";
+import { makeOpenAiRequest, } from "../../utils/ai/openai";
+import{ makeClaudeRequest } from "../../utils/ai/claude"; 
 import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
 import { title } from "process";
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-/**
- * 개별 블록을 처리하여 중요도에 따라 제목을 분류
- */
-function categorizeTitles(scrapedtitle: { rank: number; postTitle: string }[]): ImportanceTitles {
-  const importanceTitles: ImportanceTitles = { high: [], middle: [], low: [] };
-
-  for (const item of scrapedtitle) {
-    const title = item.postTitle;
-
-    if (item.rank <= 3) {
-      importanceTitles.high.push(title);
-    } else if (item.rank <= 6) {
-      importanceTitles.middle.push(title);
-    } else {
-      importanceTitles.low.push(title);
-    }
-  }
-
-  return importanceTitles;
-}
 
 /**
  * 개별 블록을 OpenAI에 전달하여 제목을 생성
@@ -42,7 +23,8 @@ async function processBlock(
 
   console.log(`"${type}" 블록 처리 중...`);
 
-  const { high, middle, low } = categorizeTitles(scrapedtitle);
+  const scrapedtitles = scrapedtitle.map(item => item.postTitle);
+  console.log("scrapedtitles:", scrapedtitles);
 
   const response = await makeOpenAiRequest<{
     analysis_results: {
@@ -69,9 +51,10 @@ async function processBlock(
       style_patterns: string;
     };
   }>(
-    titlePrompt.generatePrompt(mainKeyword, high, middle, low, subkeywords, analysis),
-    titlePrompt.system
+    titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis),
+    titlePrompt.system,
   );
+  console.log("titlePrompt.generatePrompt:", titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis));
   console.log("selected_subkeywords:", response.selected_subkeywords);
   return {
     blockType: type,
@@ -108,6 +91,7 @@ export async function generateTitle(
       const strictTitles: string[] = [];
       const creativeTitles: string[] = [];
       const styleTitles: string[] = [];
+
 
 
       if (scrapingResults.length === 1) {
