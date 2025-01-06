@@ -184,7 +184,7 @@ export function TitlePanel() {
               </a>
             </li>
           </ul>
-        </ResizablePanel> */}
+        </ResizablePanel> 
 
         <ResizableHandle />
 
