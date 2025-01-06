@@ -159,12 +159,16 @@ export function TitlePanel() {
   return (
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
-        {/* <ResizablePanel className="bg-gray-100 p-2 overflow-y-auto">
-          <ul className="space-y-1">
+        <ResizablePanel 
+          defaultSize={20}  // 패널 기본 너비 (퍼센트 또는 픽셀 단위)
+          minSize={15}      // 최소 너비 (퍼센트 또는 픽셀 단위)
+          maxSize={25}
+          className="bg-gray-100 p-2 overflow-y-auto">
+        <ul className="space-y-1 w-[150px]"> {/* 원하는 너비로 조정 */}
             <li>
               <a
                 href="/keywordextract"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
                 style={{ backgroundColor: '#e5e7eb' }}
               >
                 키워드 생성
@@ -173,7 +177,7 @@ export function TitlePanel() {
             <li>
               <a
                 href="/title"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200  truncate"
                 style={{ backgroundColor: '#e5e7eb' }}
               >
                 제목 생성
@@ -182,7 +186,7 @@ export function TitlePanel() {
             <li>
               <a
                 href="/trafficcontent"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
                 style={{ backgroundColor: '#e5e7eb' }}
               >
                 컨텐츠 생성
