@@ -61,7 +61,6 @@ export async function makeOpenAiRequest<T>(
       const cleanedContent = cleanJsonString(result.choices[0].message.content);
 
       const parsedContent = JSON.parse(cleanedContent);
-      console.log('Parsed Content:', JSON.stringify(parsedContent));
 
       if (responseTransformer) {
         return responseTransformer(parsedContent);

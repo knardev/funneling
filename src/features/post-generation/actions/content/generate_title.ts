@@ -55,6 +55,7 @@ async function processBlock(
     titlePrompt.system,
   );
   console.log("titlePrompt.generatePrompt:", titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis));
+  console.log("response:", response);
   console.log("selected_subkeywords:", response.selected_subkeywords);
   return {
     blockType: type,
