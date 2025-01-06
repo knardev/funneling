@@ -100,7 +100,6 @@ export async function generateTitle(
 
         for (let i = 0; i < 3; i++) {
           const block = scrapingResults[0]; // 첫 번째 블록을 3번 반복 처리
-          console.log(`반복 ${i + 1}:`, block);
 
           const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
 

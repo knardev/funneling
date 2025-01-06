@@ -86,11 +86,17 @@ export function TrafficPanel() {
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
-    setSubKeywordlist(result.subkeywordlist);
+    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
+      setSubKeywordlist(result.subkeywordlist.relatedTerms);
+    } else if (result.subkeywordlist.autocompleteTerms && result.subkeywordlist.autocompleteTerms.length > 0) {
+      setSubKeywordlist(result.subkeywordlist.autocompleteTerms);
+    } else {
+      setSubKeywordlist(null);
+    }
     updateLog(`콘텐츠 초기화됨`);
     return {
       serviceanalysis: result.serviceanalysis || null,
-      subkeywordlist: result.subkeywordlist,
+      subkeywordlist: result.subkeywordlist.relatedTerms || result.subkeywordlist.autocompleteTerms || [],
     };
   };
 

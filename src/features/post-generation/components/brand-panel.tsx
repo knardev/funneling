@@ -81,7 +81,13 @@ export function BrandPanel() {
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
-    setSubKeywordlist(result.subkeywordlist);
+    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
+      setSubKeywordlist(result.subkeywordlist.relatedTerms);
+    } else if (result.subkeywordlist.autocompleteTerms && result.subkeywordlist.autocompleteTerms.length > 0) {
+      setSubKeywordlist(result.subkeywordlist.autocompleteTerms);
+    } else {
+      setSubKeywordlist(null);
+    }
     updateLog(`Content initialized: ${JSON.stringify(result)}`);
   };
 
@@ -185,7 +191,13 @@ export function BrandPanel() {
       const initResult = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
       updateLog(`Content initialized: ${JSON.stringify(initResult)}`);
       setServiceAnalysis(initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
-      setSubKeywordlist(initResult.subkeywordlist);
+      if (initResult.subkeywordlist.relatedTerms && initResult.subkeywordlist.relatedTerms.length > 0) {
+        setSubKeywordlist(initResult.subkeywordlist.relatedTerms);
+      } else if (initResult.subkeywordlist.autocompleteTerms && initResult.subkeywordlist.autocompleteTerms.length > 0) {
+        setSubKeywordlist(initResult.subkeywordlist.autocompleteTerms);
+      } else {
+        setSubKeywordlist(null);
+      }
       
     //   // Generate Title
     //   updateLog("Generating title...");
