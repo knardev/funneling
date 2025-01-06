@@ -167,15 +167,6 @@ export function TitlePanel() {
         <ul className="space-y-1 w-[150px]"> {/* 원하는 너비로 조정 */}
             <li>
               <a
-                href="/keywordextract"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: '#e5e7eb' }}
-              >
-                키워드 생성
-              </a>
-            </li>
-            <li>
-              <a
                 href="/title"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200  truncate"
                 style={{ backgroundColor: '#e5e7eb' }}
@@ -185,11 +176,11 @@ export function TitlePanel() {
             </li>
             <li>
               <a
-                href="/trafficcontent"
+                href="/feedback"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
                 style={{ backgroundColor: '#e5e7eb' }}
               >
-                컨텐츠 생성
+                피드백
               </a>
             </li>
           </ul>
