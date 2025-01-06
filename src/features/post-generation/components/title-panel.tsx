@@ -159,7 +159,7 @@ export function TitlePanel() {
   return (
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
-        {/* 사이드바: 세로 스크롤 가능 */}
+        {/* 사이드바: 세로 스크롤 가능
         <ResizablePanel className="bg-gray-100 p-2 overflow-y-auto">
           <ul className="space-y-1">
             <li>
@@ -190,7 +190,7 @@ export function TitlePanel() {
               </a>
             </li>
           </ul>
-        </ResizablePanel>
+        </ResizablePanel> */}
 
         <ResizableHandle />
 
