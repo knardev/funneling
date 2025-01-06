@@ -159,7 +159,7 @@ export function TitlePanel() {
   return (
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel className="bg-gray-100 p-2 overflow-y-auto">
+        {/* <ResizablePanel className="bg-gray-100 p-2 overflow-y-auto">
           <ul className="space-y-1">
             <li>
               <a
@@ -189,7 +189,7 @@ export function TitlePanel() {
               </a>
             </li>
           </ul>
-        </ResizablePanel>
+        </ResizablePanel> */}
 
         <ResizableHandle />
 
