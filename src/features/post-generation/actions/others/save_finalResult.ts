@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { FinalResult } from "../types";
-import { Database } from "../../../../database.types";
+import { FinalResult } from "../../types";
+import { Database } from "../../../../../database.types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

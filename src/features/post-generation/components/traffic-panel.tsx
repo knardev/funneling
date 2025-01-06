@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 // Import your server actions
-import { initializeContent } from "@/features/post-generation/actions/initialize_content";
+import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 import { generateToc } from "@/features/post-generation/actions/content/generate_toc";
 import { generateIntro } from "@/features/post-generation/actions/content/generate_intro";
 import { generateBody } from "@/features/post-generation/actions/content/generate_body";
@@ -20,10 +20,10 @@ import { generateConclusion } from "@/features/post-generation/actions/content/g
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 
-import { saveFinalResult } from "../actions/save_finalResult";
+import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
 import { Textarea } from "@/components/ui/textarea";
-import { saveFeedback } from "../actions/saveFeedback";
+import { saveFeedback } from "../actions/others/saveFeedback";
 
 export function TrafficPanel() {
   // Input states
@@ -346,51 +346,54 @@ export function TrafficPanel() {
   };
 
   // 이미지 플레이스홀더(# [숫자])를 실제 이미지로 치환하여 렌더링하는 함수
-  const renderUpdatedContent = () => {
-    if (!updatedContent) return null;
+// 이미지 플레이스홀더(# [숫자] 또는 #[숫자])를 실제 이미지로 치환하여 렌더링하는 함수
+const renderUpdatedContent = () => {
+  if (!updatedContent) return null;
 
-    const regex = /#\[(\d+)\]/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
+  // `#[숫자]` 또는 `# [숫자]`를 모두 매칭하는 정규식
+  const regex = /# ?\[(\d+)\]/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
 
-    while ((match = regex.exec(updatedContent)) !== null) {
-      const index = match.index;
-      const number = parseInt(match[1], 10);
+  while ((match = regex.exec(updatedContent)) !== null) {
+    const index = match.index;
+    const number = parseInt(match[1], 10);
 
-      // 플레이스홀더 이전 텍스트
-      if (lastIndex < index) {
-        parts.push(updatedContent.substring(lastIndex, index));
-      }
-
-      // 해당 번호의 이미지 가져오기
-      const image = images[number - 1];
-      if (image) {
-        parts.push(
-          <img
-            key={number}
-            src={image.imageUrl}
-            alt={`Image ${number}`}
-            className="my-4 max-w-xs h-auto rounded-md object-contain" // 이미지 크기 조정 및 스타일링
-          />
-        );
-      } else {
-        // 이미지가 없으면 플레이스홀더를 그대로 출력
-        parts.push(match[0]);
-      }
-
-      lastIndex = regex.lastIndex;
+    // 플레이스홀더 이전 텍스트
+    if (lastIndex < index) {
+      parts.push(updatedContent.substring(lastIndex, index));
     }
 
-    // 마지막 남은 텍스트 추가
-    if (lastIndex < updatedContent.length) {
-      parts.push(updatedContent.substring(lastIndex));
+    // 해당 번호의 이미지 가져오기
+    const image = images[number - 1];
+    if (image) {
+      parts.push(
+        <img
+          key={number}
+          src={image.imageUrl}
+          alt={`Image ${number}`}
+          className="my-4 max-w-xs h-auto rounded-md object-contain" // 이미지 크기 조정 및 스타일링
+        />
+      );
+    } else {
+      // 이미지가 없으면 플레이스홀더를 그대로 출력
+      parts.push(match[0]);
     }
 
-    return parts.map((part, index) => (
-      <React.Fragment key={index}>{part}</React.Fragment>
-    ));
-  };
+    lastIndex = regex.lastIndex;
+  }
+
+  // 마지막 남은 텍스트 추가
+  if (lastIndex < updatedContent.length) {
+    parts.push(updatedContent.substring(lastIndex));
+  }
+
+  return parts.map((part, index) => (
+    <React.Fragment key={index}>{part}</React.Fragment>
+  ));
+};
+
 
   return (
     <div className="h-full">

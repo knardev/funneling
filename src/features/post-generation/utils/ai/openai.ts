@@ -56,7 +56,6 @@ export async function makeOpenAiRequest<T>(
     if (!result.choices?.[0]?.message?.content) {
       throw new Error("No content found in the response");
     }
-
     try {
       // 응답 텍스트 정리
       const cleanedContent = cleanJsonString(result.choices[0].message.content);

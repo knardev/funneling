@@ -28,11 +28,30 @@ export interface ApiResponse {
 }
 
 
+
 export interface TitleResponse {
+
   selected_subkeywords: string[];
-  optimizedTitles: string[]; // 하나의 배열로 변경
+
+  optimizedTitles: {
+
+    strict_structure: string[];
+
+    creative_structure: string[];
+
+    style_patterns: string[];
+
+  };
+
   extractedTitles: string[];
+
 }
+
+export interface ImportanceTitles  {
+  high: string[];
+  middle: string[];
+  low: string[];
+};
 
 export interface PredictionInput {
   id: string;
@@ -70,6 +89,60 @@ export interface FinalResult {
   images: GeneratedImage[];
   updatedContent: string;
 }
+// // 섹션 정보를 담는 인터페이스 정의
+// export interface Section {
+//   order: number;
+//   Tapname: string;
+//   type: '인플루언서' | '인기주제' | '인기글' | '브랜드' | '블로그' | '기타';
+//   titles: string[];
+// }
+
+export interface ImportanceTitles {
+  high: string[];
+  middle: string[];
+  low: string[];
+};
+
+export interface SmartBlockItem {
+  postTitle: string | null;
+  rank: number;
+}
+
+export interface SmartBlock {
+  type: string | null;
+  items: SmartBlockItem[];
+  moreButtonLink: string | null;
+  moreButtonRawLink: string | null;
+  index: number;
+}
+
+export interface PopularTopicItem {
+  title: string | null;
+  thumbnailImageUrl: string | null;
+  detailSerpUrl: string | null;
+}
+
+export interface SerpData {
+  smartBlocks: SmartBlock[];
+}
+
+export interface ScrapedTitle {
+  rank: number;
+  postTitle: string;
+}
+
+export interface ScrapingResult {
+  index: number;
+  type: string;
+  scrapedtitle: ScrapedTitle[];
+}
+
+export interface subkeywordlist{
+  relatedTerms: string[];
+  autocompleteTerms: string[];
+}
+
+export type ScrapingResults = ScrapingResult[];
 
 
 export * from './types';
