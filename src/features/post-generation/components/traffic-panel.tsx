@@ -52,6 +52,9 @@ export function TrafficPanel() {
   // Debug log state
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
+  const [isContentGenerated, setIsContentGenerated] = useState(false);
+  const [imageButtonDisabled, setImageButtonDisabled] = useState(false);
+
   const persona = {
     service_industry: serviceType,
     service_name: personaServiceName,
@@ -297,6 +300,8 @@ export function TrafficPanel() {
       } catch (error) {
         updateLog(`❌ 콘텐츠 생성 오류: ${error}`);
         console.error("콘텐츠 생성 오류:", error);
+      } finally {
+        setIsContentGenerated(true);
       }
     };
   
@@ -436,86 +441,109 @@ const renderUpdatedContent = () => {
 
 
 return (
-  <div className="h-full p-4 bg-gray-50">
-    <ResizablePanelGroup 
-    direction="horizontal"
-    className= "h-full w-full">
+  <div className="h-screen w-full overflow-hidden bg-gray-50">
+    <ResizablePanelGroup direction="horizontal">
       {/* 사이드바 */}
-      <ResizablePanel defaultSize={15} minSize={10} maxSize={20} className="bg-gray-100 p-2 ">
+      <ResizablePanel
+        defaultSize={20}
+        minSize={15}
+        maxSize={25}
+        className="bg-gray-100 p-2 overflow-y-auto"
+      >
         <ul className="space-y-1">
           <li>
-            <a href="/keyword" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+            <a
+              href="/keyword"
+              className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+              style={{ backgroundColor: "#e5e7eb" }}
+            >
               키워드 ㅊㅊ
             </a>
           </li>
           <li>
-            <a href="/title" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+            <a
+              href="/title"
+              className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+              style={{ backgroundColor: "#e5e7eb" }}
+            >
               제목 ㅊㅊ
             </a>
           </li>
           <li>
-            <a href="/traffic" className="block px-2 py-1 rounded-md hover:bg-gray-200">
-              트래픽 컨텐츠
+            <a
+              href="/traffic"
+              className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+              style={{ backgroundColor: "#e5e7eb" }}
+            >
+              정보성글 ㅊㅊ
             </a>
           </li>
           <li>
-            <a href="/feedback" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+            <a
+              href="/feedback"
+              className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+              style={{ backgroundColor: "#e5e7eb" }}
+            >
               피드백
             </a>
           </li>
         </ul>
       </ResizablePanel>
 
-      <ResizableHandle className="bg-slate-300" />
+      {/* 리사이저 핸들 */}
+      <ResizableHandle withHandle />
 
       {/* 메인 영역 */}
-      <ResizablePanel defaultSize={85} className="p-4 flex flex-col gap-4">
-        <div className="flex flex-wrap gap-4 items-center mb-4">
+      <ResizablePanel
+        defaultSize={80}
+        minSize={70}
+        className="p-4 flex flex-col gap-4 overflow-hidden"
+      >
+        {/* 입력 필드 */}
+        <div className="flex gap-4 items-center">
           <div className="flex-1">
-          <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+            <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
             <Input
               placeholder="키워드를 입력하세요"
               value={mainkeyword}
               onChange={(e) => setMainKeyword(e.target.value)}
+              className="w-full"
             />
           </div>
           <div className="flex-1">
-          <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+            <h2 className="text-lg font-bold mb-2">제목 입력</h2>
             <Input
               placeholder="제목을 입력하세요"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="w-full"
             />
           </div>
-          <div className="flex gap-2">
-            {intro && body && conclusion ? (
-              <Button onClick={handleGenerateImagePromptAndImages}>이미지 생성</Button>
-            ) : (
-              <Button onClick={handleGenerateContent}>컨텐츠 생성</Button>
-            )}
-          </div>
-        </div>
-
-        {/* 상태 초기화 버튼 */}
-        <div className="flex gap-2 mb-4">
-          <Button variant="destructive" onClick={handleResetStates}>
-            상태 초기화
+          <Button
+            onClick={isContentGenerated ? handleGenerateImagePromptAndImages : handleGenerateContent}
+            disabled={isContentGenerated && imageButtonDisabled}
+            className="bg-blue-500 text-white mt-auto justify-end "
+          >
+            {isContentGenerated ? "이미지 생성" : "📝 컨텐츠 생성"}
           </Button>
         </div>
+        <br className = "mb-2 "/>
 
-        {/* 결과 표시 */}
-        <div className="bg-white p-4 rounded-md shadow-md">
-          <h3 className="font-bold mb-2">생성된 콘텐츠</h3>
+        {/* 생성된 콘텐츠 */}
+        <div className="flex-1 bg-white rounded-md shadow-md border border-gray-300 overflow-y-auto overflow-x-hidden p-4">
+          <h3 className="font-bold mb-2">📑 생성된 콘텐츠</h3>
           <div className="space-y-2 text-sm">
-            <pre>키워드: {mainkeyword}</pre>
-            <pre>제목: {title}</pre>
-            <pre>목차: {toc}</pre>
-            <pre>서론: {intro}</pre>
-            <pre>본론: {body}</pre>
-            <pre>결론: {conclusion}</pre>
+            <div className="whitespace-pre-wrap break-words">📝 키워드: {mainkeyword}</div>
+            <div className="whitespace-pre-wrap break-words">🏷️ 제목: {title}</div>
+            <div className="whitespace-pre-wrap break-words">📚 목차: {toc}</div>
+            <div className="whitespace-pre-wrap break-words">🖊️ 서론: {intro}</div>
+            <div className="whitespace-pre-wrap break-words">📖 본론: {body}</div>
+            <div className="whitespace-pre-wrap break-words">🔚 결론: {conclusion}</div>
+            <div className="whitespace-pre-wrap break-words">
+              <span>최종 콘텐츠:</span> {renderUpdatedContent()}
+            </div>
           </div>
         </div>
-
       </ResizablePanel>
     </ResizablePanelGroup>
   </div>
