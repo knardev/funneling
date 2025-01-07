@@ -38,12 +38,12 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}
         >
-          <ThemeProvider
+          {/* <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          >
+          > */}
             <SidebarProvider>
               <SidebarInset>
                 <main className="p-4 overflow-auto h-screen">
@@ -54,7 +54,7 @@ export default function RootLayout({
                 </main>
               </SidebarInset>
             </SidebarProvider>
-          </ThemeProvider>
+          {/* </ThemeProvider> */}
         </body>
       </Providers>
     </html>

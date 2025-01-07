@@ -501,7 +501,7 @@ return (
       >
         {/* 입력 필드 */}
         <div className="flex gap-4 p-4 items-center rounded-md shadow">
-          <div className="flex-1">
+          <div className="flex-2">
             <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
             <Input
               placeholder="키워드를 입력하세요"
