@@ -47,9 +47,9 @@ export default function RootLayout({
             <SidebarProvider>
               <SidebarInset>
                 <main className="p-4 overflow-auto h-screen">
-                  {/* <SidebarTrigger /> */}
+
                   {children}
-                  {/* <ModeToggle /> */}
+
                   <Toaster />
                 </main>
               </SidebarInset>

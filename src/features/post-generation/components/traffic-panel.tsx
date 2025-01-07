@@ -500,14 +500,14 @@ return (
         className="p-4 flex flex-col gap-4 overflow-hidden"
       >
         {/* 입력 필드 */}
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-4 p-4 items-center rounded-md shadow">
           <div className="flex-1">
             <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
             <Input
               placeholder="키워드를 입력하세요"
               value={mainkeyword}
               onChange={(e) => setMainKeyword(e.target.value)}
-              className="w-full"
+              className="w-1/2"
             />
           </div>
           <div className="flex-1">
@@ -522,12 +522,11 @@ return (
           <Button
             onClick={isContentGenerated ? handleGenerateImagePromptAndImages : handleGenerateContent}
             disabled={isContentGenerated && imageButtonDisabled}
-            className="bg-blue-500 text-white mt-auto justify-end "
+            className="mt-auto justify-end "
           >
             {isContentGenerated ? "이미지 생성" : "📝 컨텐츠 생성"}
           </Button>
         </div>
-        <br className = "mb-2 "/>
 
         {/* 생성된 콘텐츠 */}
         <div className="flex-1 bg-white rounded-md shadow-md border border-gray-300 overflow-y-auto overflow-x-hidden p-4">
