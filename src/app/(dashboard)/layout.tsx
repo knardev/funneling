@@ -38,23 +38,23 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}
         >
-          <ThemeProvider
+          {/* <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          >
-            <SidebarProvider>
-              <SidebarInset>
-                <main className="p-4 overflow-auto h-screen">
-                  {/* <SidebarTrigger /> */}
-                  {children}
-                  {/* <ModeToggle /> */}
-                  <Toaster />
-                </main>
-              </SidebarInset>
-            </SidebarProvider>
-          </ThemeProvider>
+          > */}
+          <SidebarProvider>
+            <SidebarInset>
+              <main className="p-4 overflow-auto h-screen">
+                {/* <SidebarTrigger /> */}
+                {children}
+                {/* <ModeToggle /> */}
+                <Toaster />
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+          {/* </ThemeProvider> */}
         </body>
       </Providers>
     </html>
