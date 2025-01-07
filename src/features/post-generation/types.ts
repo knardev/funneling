@@ -8,6 +8,7 @@ export interface KeywordObj {
     service_industry: string;
     service_advantage: string;
   }
+
   export interface Analysis {
     industry_analysis: string | null;
     advantage_analysis: string | null;

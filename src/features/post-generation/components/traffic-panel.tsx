@@ -82,7 +82,8 @@ export function TrafficPanel() {
     updateLog("초기화 중...");
     const hasAllPersonaData =
       personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
-    const result = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
+    const personaData = hasAllPersonaData ? persona : undefined; // Ensure it's undefined instead of null
+    const result = await initializeContent(mainkeyword, personaData);
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
@@ -267,6 +268,39 @@ export function TrafficPanel() {
     }
   };
 
+    // 📌 통합 핸들러: 초기화 + TOC + 서론, 본론, 결론 생성
+    const handleGenerateContent = async () => {
+      try {
+        updateLog("🔄 콘텐츠 생성 시작...");
+  
+        // Step 1: 초기화 및 TOC 생성
+        updateLog("1️⃣ 초기화 및 목차 생성 중...");
+        const initResult = await initializeContent(mainkeyword);
+        const tocResult = await generateToc(mainkeyword, title, initResult.serviceanalysis, );
+        setToc(tocResult.toc);
+        updateLog("✅ 초기화 및 목차 생성 완료!");
+  
+        // Step 2: 서론, 본론, 결론 생성
+        updateLog("2️⃣ 서론 생성 중...");
+        const introResult = await generateIntro(mainkeyword, title, tocResult.toc, initResult.serviceanalysis);
+        setIntro(introResult.intro);
+  
+        updateLog("3️⃣ 본론 생성 중...");
+        const bodyResult = await generateBody(mainkeyword, title, tocResult.toc, introResult.intro,initResult.serviceanalysis);  
+        setBody(bodyResult.body);
+  
+        updateLog("4️⃣ 결론 생성 중...");
+        const conclusionResult = await generateConclusion(mainkeyword, title, tocResult.toc, introResult.intro, bodyResult.body,initResult.serviceanalysis);
+        setConclusion(conclusionResult.conclusion);
+  
+        updateLog("✅ 콘텐츠 생성 완료!");
+      } catch (error) {
+        updateLog(`❌ 콘텐츠 생성 오류: ${error}`);
+        console.error("콘텐츠 생성 오류:", error);
+      }
+    };
+  
+
   // 기존의 모든 단계를 순차적으로 실행하는 핸들러
   const handleRunAll = async () => {
     updateLog("모든 단계 실행 시작...");
@@ -401,89 +435,89 @@ const renderUpdatedContent = () => {
 };
 
 
-  return (
-    <div className="h-full">
-      <ResizablePanelGroup direction="horizontal">
+return (
+  <div className="h-full p-4 bg-gray-50">
+    <ResizablePanelGroup 
+    direction="horizontal"
+    className= "h-full w-full">
+      {/* 사이드바 */}
+      <ResizablePanel defaultSize={15} minSize={10} maxSize={20} className="bg-gray-100 p-2 ">
+        <ul className="space-y-1">
+          <li>
+            <a href="/keyword" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+              키워드 ㅊㅊ
+            </a>
+          </li>
+          <li>
+            <a href="/title" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+              제목 ㅊㅊ
+            </a>
+          </li>
+          <li>
+            <a href="/traffic" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+              트래픽 컨텐츠
+            </a>
+          </li>
+          <li>
+            <a href="/feedback" className="block px-2 py-1 rounded-md hover:bg-gray-200">
+              피드백
+            </a>
+          </li>
+        </ul>
+      </ResizablePanel>
 
-          <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
-            <h2>초기 입력</h2>
-            <div>
-              <Label>키워드</Label>
-              <Input
-                placeholder="키워드를 입력하세요"
-                value={mainkeyword}
-                onChange={(e) => setMainKeyword(e.target.value)}  
-              />
-            </div>
-            <div>
-              <Label>제목</Label>
-              <Input
-                placeholder="제목을 입력하세요"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleInitializeAndGenerateToc}>
-                초기화 및 목차 생성
-              </Button>
-              <Button onClick={handleGenerateIntroductionBodyConclusion}>
-                컨텐츠 생성
-              </Button>
-              <Button onClick={handleGenerateImagePromptAndImages}>
-                이미지 생성
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Button onClick={handleRunAll}>모든 단계 실행</Button>
-              <Button variant="destructive" onClick={handleResetStates}>
-                상태 초기화
-              </Button>
-            </div>
-            <h2>피드백</h2>
-            <Textarea className="flex-1"
-              placeholder={`더 나은 서비스를 위해 소중한 피드백 부탁드립니다!
+      <ResizableHandle className="bg-slate-300" />
 
-피드백 예시
-- 컨텐츠 방향: '이 부분은 ~한 느낌이에요. ~하게 수정하면 좋을 것 같아요.'
-- 이미지 관련: '이미지가 너무 ~해요. ~한 이미지면 더 좋을 것 같아요.'
-- 사용성: '복사 붙여넣기가 잘 안 돼요. 개선 부탁드립니다.'`}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
+      {/* 메인 영역 */}
+      <ResizablePanel defaultSize={85} className="p-4 flex flex-col gap-4">
+        <div className="flex flex-wrap gap-4 items-center mb-4">
+          <div className="flex-1">
+          <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+            <Input
+              placeholder="키워드를 입력하세요"
+              value={mainkeyword}
+              onChange={(e) => setMainKeyword(e.target.value)}
             />
-            <Button onClick={handleSaveFeedback}>피드백 전송</Button>
           </div>
- 
-        <ResizableHandle className="bg-slate-300" />
-        <ResizablePanel
-          defaultSize={75}
-          maxSize={75}
-          className="p-4 flex flex-col gap-4"
-        >
-          <h2>Debug Panel</h2>
-          <div className="flex-1 overflow-y-auto mt-4">
-            {!updatedContent && (
-              <div className="mt-4 space-y-2 text-sm">
-                <pre><span className="font-bold text-lg">키워드:</span> {mainkeyword}</pre>
-              <pre><span className="font-bold text-lg">제목:</span> {title}</pre>
-              <pre><span className="font-bold text-lg">목차:</span> {toc}</pre>
-              <pre><span className="font-bold text-lg">서론:</span> {intro}</pre>
-              <pre><span className="font-bold text-lg">본론:</span> {body}</pre>
-              <pre><span className="font-bold text-lg">결론:</span> {conclusion}</pre>
-            </div>
+          <div className="flex-1">
+          <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+            <Input
+              placeholder="제목을 입력하세요"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            {intro && body && conclusion ? (
+              <Button onClick={handleGenerateImagePromptAndImages}>이미지 생성</Button>
+            ) : (
+              <Button onClick={handleGenerateContent}>컨텐츠 생성</Button>
             )}
-            <pre><span className="font-bold text-lg">최종 콘텐츠:</span> {renderUpdatedContent()}</pre>
-            <div className="mt-4">
-              <h3>실행 로그:</h3>
-              <div className="text-sm">
-                {debugLogs.map((log, index) => (
-                  <div key={index}>{log}</div>
-                ))}
-              </div>
-            </div>
           </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
-  );
+        </div>
+
+        {/* 상태 초기화 버튼 */}
+        <div className="flex gap-2 mb-4">
+          <Button variant="destructive" onClick={handleResetStates}>
+            상태 초기화
+          </Button>
+        </div>
+
+        {/* 결과 표시 */}
+        <div className="bg-white p-4 rounded-md shadow-md">
+          <h3 className="font-bold mb-2">생성된 콘텐츠</h3>
+          <div className="space-y-2 text-sm">
+            <pre>키워드: {mainkeyword}</pre>
+            <pre>제목: {title}</pre>
+            <pre>목차: {toc}</pre>
+            <pre>서론: {intro}</pre>
+            <pre>본론: {body}</pre>
+            <pre>결론: {conclusion}</pre>
+          </div>
+        </div>
+
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  </div>
+);
 }
