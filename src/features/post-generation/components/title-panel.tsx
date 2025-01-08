@@ -160,9 +160,9 @@ export function TitlePanel() {
     <div className="h-full">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel 
-          defaultSize={20}  // 패널 기본 너비 (퍼센트 또는 픽셀 단위)
-          minSize={15}      // 최소 너비 (퍼센트 또는 픽셀 단위)
-          maxSize={25}
+          defaultSize={15}  // Increased from 20 to 25
+          minSize={10}      // Increased from 10 to 15
+          maxSize={15} 
           className="bg-gray-100 p-2 overflow-y-auto">
         <ul className="space-y-1 w-[150px]"> {/* 원하는 너비로 조정 */}
             <li>
@@ -190,7 +190,7 @@ export function TitlePanel() {
 
         {/* 메인 패널: 세로 스크롤 가능 */}
         <ResizablePanel
-          defaultSize={75}
+          defaultSize={85}
           maxSize={85}
           className="p-4 flex flex-col gap-4 overflow-y-auto"
         >

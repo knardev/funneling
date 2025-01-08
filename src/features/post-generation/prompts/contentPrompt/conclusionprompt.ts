@@ -61,7 +61,8 @@ export const conclusionPrompt = {
 
         1. 결론1 내용은 하나의 텍스트로 연결된 흐름으로 작성해야 합니다.  
         2. JSON 형식의 키값 **optimized_conclusion** 안에 결론 전체 텍스트를 포함해야 합니다.  
-        3. 반드시 아래 JSON 구조로만 출력하세요. JSON 외의 어떤 내용도 출력하지 말아야 합니다.
+        3. 반드시 **optimized_conclusion** 텍스트 내 줄바꿈, 탭 문자는 \\n과 같이 이스케이프 처리해야 합니다.
+        4. 반드시 아래 JSON 구조로만 출력하세요. JSON 외의 어떤 내용도 출력하지 말아야 합니다.
 
 
             \n\nAssistant:

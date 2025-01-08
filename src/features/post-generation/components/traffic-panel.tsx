@@ -19,20 +19,55 @@ import { generateBody } from "@/features/post-generation/actions/content/generat
 import { generateConclusion } from "@/features/post-generation/actions/content/generate_conclusion";
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
-
 import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
 import { Textarea } from "@/components/ui/textarea";
 import { saveFeedback } from "../actions/others/saveFeedback";
 
+/* ==========================
+   1) 진행도 표시 컴포넌트
+   ========================== */
+function ProgressBar({
+  progress,
+  message,
+}: {
+  progress: number;
+  message: string;
+}) {
+  const clampedProgress = Math.max(0, Math.min(100, progress));
+
+  return (
+    <div className="mt-3 mb-2 w-full">
+      {progress > 0 && progress < 100 && (
+        <p className="text-sm text-gray-700 mb-1 font-medium">
+          {message} ({clampedProgress}%)
+        </p>
+      )}
+      {progress === 100 && (
+        <p className="text-sm mb-1 font-medium">완료되었습니다!</p>
+      )}
+      <div className="w-full bg-gray-300 h-3 rounded-md">
+        <div
+          className="bg-blue-500 h-3 rounded-md transition-all duration-300"
+          style={{ width: `${clampedProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function TrafficPanel() {
-  // Input states
+  // ===================
+  // 1) 입력 상태
+  // ===================
   const [mainkeyword, setMainKeyword] = useState("");
   const [personaServiceName, setPersonaServiceName] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [serviceAdvantages, setServiceAdvantages] = useState("");
 
-  // Result states
+  // ===================
+  // 2) 결과 상태
+  // ===================
   const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
     industry_analysis: null,
     advantage_analysis: null,
@@ -45,36 +80,126 @@ export function TrafficPanel() {
   const [body, setBody] = useState("");
   const [conclusion, setConclusion] = useState("");
   const [updatedContent, setUpdatedContent] = useState("");
-  const [imagePrompts, setImagePrompts] = useState<{ id: string; prompt: string }[]>([]);
+  const [imagePrompts, setImagePrompts] = useState<
+    { id: string; prompt: string }[]
+  >([]);
   const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
   const [feedback, setFeedback] = useState("");
 
-  // Debug log state
+  // ===================
+  // 3) 디버그 로그
+  // ===================
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
-  const persona = {
-    service_industry: serviceType,
-    service_name: personaServiceName,
-    service_advantage: serviceAdvantages,
+  // ===================
+  // 4) 진행도
+  // ===================
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
+
+  // ===================
+  // 5) 생성 완료 여부
+  // ===================
+  const [isContentGenerated, setIsContentGenerated] = useState(false);
+
+  // =========================================
+  // 0) 전체 state 리셋 함수 (이미 존재)
+  // =========================================
+  function resetAllStates() {
+    // 생성 결과 상태 초기화
+    setSubKeywordlist(null);
+    setToc("");
+    setIntro("");
+    setBody("");
+    setConclusion("");
+    setUpdatedContent("");
+    setImagePrompts([]);
+    setImages([]);
+    setProgress(0);
+    setProgressMessage("");
+    setIsContentGenerated(false);
+  }
+
+  // =========================================
+  // 7) 복사 함수 추가/수정
+  // =========================================
+
+  // 7-1) intro + body + conclusion만 복사하는 함수
+  const handleCopyIntroBodyConclusion = async () => {
+    // intro, body, conclusion 문자열 합침
+    const combinedText = [intro, body, conclusion]
+      .filter((t) => t.trim().length > 0) // 빈 문자열 제거
+      .join("\n\n");
+
+    try {
+      if (!combinedText) {
+        alert("⚠️ 복사할 내용이 없습니다.");
+        return;
+      }
+      await navigator.clipboard.writeText(combinedText);
+      alert("✅ 본문(서론, 본론, 결론)이 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 본문 복사 중 오류가 발생했습니다.");
+    }
   };
 
-  const content = {
-    title,
-    toc: [toc],
-    intro,
-    body,
-    conclusion,
+  // 7-2) 텍스트 + 이미지 복사(기존 로직 유지)
+  const handleCopyUpdatedContentWithImages = async () => {
+    try {
+      if (!updatedContent) {
+        alert("⚠️ 복사할 콘텐츠가 없습니다.");
+        return;
+      }
+
+      // 텍스트를 HTML로 변환 (줄바꿈 -> <br>)
+      let htmlContent = updatedContent.replace(/\\n/g, "\n");
+      htmlContent = htmlContent
+        .split("\n")
+        .map((line) => {
+          // 이미지 플레이스홀더 처리
+          return line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const image = images[number - 1];
+            return image
+              ? `<img src="${image.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
+              : match; // 이미지 없으면 그대로 둠
+          });
+        })
+        .join("<br>"); // 모든 줄을 다시 <br>로 결합
+
+      // HTML 포맷으로 클립보드에 복사
+      const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+
+      await navigator.clipboard.write([clipboardItem]);
+
+      alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
+    }
   };
 
-  // Utility function to update logs
+  // ============= 기존 함수들 그대로 유지 (initializeContent, etc)
+  // --------------------------------------------------------------------------
+
   const updateLog = (message: string) => {
     setDebugLogs((prevLogs) => [
       ...prevLogs,
       `${new Date().toISOString()}: ${message}`,
     ]);
+    console.log(message);
   };
 
-  // Individual step execution handlers
+  const renderWithLineBreaks = (text: string) => {
+    return text.split("\n").map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
+  };
+
   const handleInitializeContent = async (): Promise<{
     serviceanalysis: Analysis | null;
     subkeywordlist: string[] | null;
@@ -82,21 +207,38 @@ export function TrafficPanel() {
     updateLog("초기화 중...");
     const hasAllPersonaData =
       personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
-    const result = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
+    const personaData = hasAllPersonaData
+      ? {
+          service_industry: serviceType,
+          service_name: personaServiceName,
+          service_advantage: serviceAdvantages,
+        }
+      : undefined;
+
+    const result = await initializeContent(mainkeyword, personaData);
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
-    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
+    if (
+      result.subkeywordlist.relatedTerms &&
+      result.subkeywordlist.relatedTerms.length > 0
+    ) {
       setSubKeywordlist(result.subkeywordlist.relatedTerms);
-    } else if (result.subkeywordlist.autocompleteTerms && result.subkeywordlist.autocompleteTerms.length > 0) {
+    } else if (
+      result.subkeywordlist.autocompleteTerms &&
+      result.subkeywordlist.autocompleteTerms.length > 0
+    ) {
       setSubKeywordlist(result.subkeywordlist.autocompleteTerms);
     } else {
       setSubKeywordlist(null);
     }
-    updateLog(`콘텐츠 초기화됨`);
+    updateLog("콘텐츠 초기화 완료");
     return {
       serviceanalysis: result.serviceanalysis || null,
-      subkeywordlist: result.subkeywordlist.relatedTerms || result.subkeywordlist.autocompleteTerms || [],
+      subkeywordlist:
+        result.subkeywordlist.relatedTerms ||
+        result.subkeywordlist.autocompleteTerms ||
+        [],
     };
   };
 
@@ -107,7 +249,7 @@ export function TrafficPanel() {
     updateLog("목차 생성 중...");
     const result = await generateToc(mainkeyword, currentTitle);
     setToc(result.toc);
-    updateLog(`목차 생성됨`);
+    updateLog("목차 생성 완료");
     return result.toc;
   };
 
@@ -116,8 +258,10 @@ export function TrafficPanel() {
     currentTitle: string,
     currentToc: string
   ): Promise<string> => {
+    updateLog("서론 생성 중...");
     const result = await generateIntro(mainkeyword, currentTitle, currentToc);
     setIntro(result.intro);
+    updateLog("서론 생성 완료");
     return result.intro;
   };
 
@@ -127,8 +271,15 @@ export function TrafficPanel() {
     currentToc: string,
     currentIntro: string
   ): Promise<string> => {
-    const result = await generateBody(mainkeyword, currentTitle, currentToc, currentIntro);
+    updateLog("본론 생성 중...");
+    const result = await generateBody(
+      mainkeyword,
+      currentTitle,
+      currentToc,
+      currentIntro
+    );
     setBody(result.body);
+    updateLog("본론 생성 완료");
     return result.body;
   };
 
@@ -139,14 +290,16 @@ export function TrafficPanel() {
     currentIntro: string,
     currentBody: string
   ): Promise<string> => {
+    updateLog("결론 생성 중...");
     const result = await generateConclusion(
       mainkeyword,
       currentTitle,
       currentToc,
       currentIntro,
-      currentBody,
+      currentBody
     );
     setConclusion(result.conclusion);
+    updateLog("결론 생성 완료");
     return result.conclusion;
   };
 
@@ -163,11 +316,13 @@ export function TrafficPanel() {
     updatedContent: string;
     imagePrompts: { id: string; prompt: string }[];
   }> => {
+    updateLog("이미지 프롬프트 생성 중...");
     const result = await generateImagePrompt(currentContent);
     if (result.updatedContent) {
       setUpdatedContent(result.updatedContent);
     }
     setImagePrompts(result.imagePrompts);
+    updateLog("이미지 프롬프트 생성 완료");
     return {
       updatedContent: result.updatedContent || "",
       imagePrompts: result.imagePrompts,
@@ -177,16 +332,17 @@ export function TrafficPanel() {
   const handleGenerateImages = async (
     imagePromptsData: { id: string; prompt: string }[]
   ): Promise<{ id: string; imageUrl: string }[]> => {
-    updateLog("이미지 생성 중...");
+    updateLog("이미지 실제 생성 중...");
     const result = await generateImage(imagePromptsData);
     setImages(result.images);
+    updateLog("이미지 생성 완료");
     return result.images;
   };
 
   const handleSaveFinalResult = async (finalResult: FinalResult) => {
     try {
       updateLog("최종 결과 저장 중...");
-      const result = await saveFinalResult(finalResult);
+      await saveFinalResult(finalResult);
       updateLog("최종 결과 저장 완료");
     } catch (error) {
       updateLog(`최종 결과 저장 오류: ${error}`);
@@ -200,44 +356,69 @@ export function TrafficPanel() {
     updateLog("피드백 전송 완료");
     setFeedback("");
   };
-  // 새로운 통합 핸들러 함수들
-  // 1a. 초기화 및 TOC 생성
-  const handleInitializeAndGenerateToc = async () => {
+
+  // ========== 통합 핸들러: 컨텐츠 생성 ==========
+  const handleGenerateContent = async () => {
+    // 만약 기존 updatedContent가 있다면, resetAllStates() 먼저
+    if (updatedContent) {
+      resetAllStates();
+    }
     try {
-      updateLog("초기화 및 목차 생성 시작...");
+      updateLog("🔄 콘텐츠 생성 시작...");
+      setProgress(10);
+      setProgressMessage("컨텐츠 초기화 중...");
       const initResult = await handleInitializeContent();
+
+      setProgress(30);
+      setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
-      setToc(tocResult);
-      updateLog("초기화 및 목차 생성 완료");
-      // No need to return, states are already set
+
+      setProgress(50);
+      setProgressMessage("서론 생성 중...");
+      const introResult = await handleGenerateIntro(
+        initResult.serviceanalysis,
+        title,
+        tocResult
+      );
+
+      setProgress(70);
+      setProgressMessage("본론 생성 중...");
+      const bodyResult = await handleGenerateBody(
+        initResult.serviceanalysis,
+        title,
+        tocResult,
+        introResult
+      );
+
+      setProgress(90);
+      setProgressMessage("결론 생성 중...");
+      const conclusionResult = await handleGenerateConclusion(
+        initResult.serviceanalysis,
+        title,
+        tocResult,
+        introResult,
+        bodyResult
+      );
+
+      updateLog("✅ 콘텐츠 생성 완료!");
+      setIsContentGenerated(true);
+      setProgress(100);
+      setProgressMessage("컨텐츠 생성 완료!");
     } catch (error) {
-      updateLog(`초기화 및 목차 생성 오류: ${error}`);
-      console.error("초기화 및 목차 생성 오류:", error);
+      updateLog(`❌ 콘텐츠 생성 오류: ${error}`);
+      console.error("콘텐츠 생성 오류:", error);
+      setProgress(0);
+      setProgressMessage("");
     }
   };
 
-  // 1b. 서론, 본문, 결론 생성
-  const handleGenerateIntroductionBodyConclusion = async () => {
-    try {
-      updateLog("컨텐츠 생성 시작...");
-      const introResult = await handleGenerateIntro(serviceAnalysis, title, toc);
-      setIntro(introResult);
-      const bodyResult = await handleGenerateBody(serviceAnalysis, title, toc, introResult);
-      setBody(bodyResult);
-      const conclusionResult = await handleGenerateConclusion(serviceAnalysis, title, toc, introResult, bodyResult);
-      setConclusion(conclusionResult);
-      updateLog("컨텐츠 생성 완료");
-      // No need to return, states are already set
-    } catch (error) {
-      updateLog(`컨텐츠 생성 오류: ${error}`);
-      console.error("컨텐츠 생성 오류:", error);
-    }
-  };
-
-  // 1c. 이미지 프롬프트 및 이미지 생성 + 최종 결과 저장
+  // ========== 통합 핸들러: 이미지 생성 ==========
   const handleGenerateImagePromptAndImages = async () => {
     try {
       updateLog("이미지 생성 시작...");
+      setProgress(10);
+      setProgressMessage("이미지 프롬프트 생성 중...");
+
       const currentContent = {
         title,
         toc: [toc],
@@ -245,72 +426,31 @@ export function TrafficPanel() {
         body,
         conclusion,
       };
-      const imagePromptResult = await handleGenerateImagePrompt(serviceAnalysis, currentContent);
-      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
-      updateLog("이미지 생성 완료");
-      // No need to return, states are already set
-      updateLog("최종 결과 저장 중...");
-      const finalResult: FinalResult = {
-        mainKeyword: mainkeyword,
-        persona,
-        service_analysis: serviceAnalysis,
-        content,
-        imagePrompts: imagePromptResult.imagePrompts,
-        images: imagesResult,
-        updatedContent: imagePromptResult.updatedContent || "",
-      };
-      const result = await saveFinalResult(finalResult);
-      updateLog("최종 결과 저장 완료");
-    } catch (error) {
-      updateLog(`최종 결과 저장 오류: ${error}`);
-      console.error("최종 결과 저장 오류:", error);
-    }
-  };
+      const imagePromptResult = await handleGenerateImagePrompt(
+        serviceAnalysis,
+        currentContent
+      );
 
-  // 기존의 모든 단계를 순차적으로 실행하는 핸들러
-  const handleRunAll = async () => {
-    updateLog("모든 단계 실행 시작...");
-
-    try {
-      // 초기화 및 TOC 생성
-      updateLog("초기화 및 목차 생성...");
-      const initResult = await handleInitializeContent();
-      const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
-
-      // 서론, 본문, 결론 생성
-      updateLog("컨텐츠 생성...");
-      const introResult = await handleGenerateIntro(initResult.serviceanalysis, title, tocResult);
-      const bodyResult = await handleGenerateBody(initResult.serviceanalysis, title, tocResult, introResult);
-      const conclusionResult = await handleGenerateConclusion(initResult.serviceanalysis, title, tocResult, introResult, bodyResult);
-
-      // 이미지 프롬프트 및 이미지 생성
-      updateLog("이미지 생성...");
-      const currentContent = {
-        title: title,
-        toc: [tocResult],
-        intro: introResult,
-        body: bodyResult,
-        conclusion: conclusionResult,
-      };
-      const imagePromptResult = await handleGenerateImagePrompt(initResult.serviceanalysis, currentContent);
+      setProgress(50);
+      setProgressMessage("이미지 실제 생성 중...");
       const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
 
-      // 최종 결과 저장
-      updateLog("최종 결과 저장...");
+      setProgress(80);
+      setProgressMessage("최종 결과 저장 중...");
       const finalResult: FinalResult = {
         mainKeyword: mainkeyword,
-        persona,
-        service_analysis: initResult.serviceanalysis || {
-          industry_analysis: null,
-          advantage_analysis: null,
-          target_needs: null,
+        persona: {
+          service_industry: serviceType,
+          service_name: personaServiceName,
+          service_advantage: serviceAdvantages,
         },
+        service_analysis: serviceAnalysis,
         content: {
-          title: title,
-          toc: [tocResult],
-          intro: introResult,
-          body: bodyResult,
-          conclusion: conclusionResult,
+          title,
+          toc: [toc],
+          intro,
+          body,
+          conclusion,
         },
         imagePrompts: imagePromptResult.imagePrompts,
         images: imagesResult,
@@ -318,169 +458,259 @@ export function TrafficPanel() {
       };
       await handleSaveFinalResult(finalResult);
 
-      updateLog("모든 단계 실행 완료.");
-      console.log("모든 단계 실행 완료.");
+      setProgress(100);
+      setProgressMessage("이미지 생성 완료!");
+      updateLog("최종 결과 저장 완료");
     } catch (error) {
-      updateLog(`모든 단계 실행 오류: ${error}`);
-      console.error("모든 단계 실행 오류:", error);
+      updateLog(`❌ 이미지 생성 오류: ${error}`);
+      console.error("이미지 생성 오류:", error);
+      setProgress(0);
+      setProgressMessage("");
     }
   };
 
-  // 상태 초기화 핸들러
-  const handleResetStates = () => {
-    setMainKeyword("");
-    setPersonaServiceName("");
-    setServiceType("");
-    setServiceAdvantages("");
-    setSubKeywordlist(null);
-    setServiceAnalysis({
-      industry_analysis: null,
-      advantage_analysis: null,
-      target_needs: null,
-    });
-    setTitle("");
-    setToc("");
-    setIntro("");
-    setBody("");
-    setConclusion("");
-    setUpdatedContent("");
-    setImagePrompts([]);
-    setImages([]);
-    setDebugLogs([]);
-    updateLog("상태 초기화됨.");
-    setFeedback("");
-  };
+  // ========== 최종 콘텐츠 렌더링(이미지 치환) ==========
+  const renderUpdatedContent = () => {
+    if (!updatedContent) return null;
 
-  // 이미지 플레이스홀더(# [숫자])를 실제 이미지로 치환하여 렌더링하는 함수
-// 이미지 플레이스홀더(# [숫자] 또는 #[숫자])를 실제 이미지로 치환하여 렌더링하는 함수
-const renderUpdatedContent = () => {
-  if (!updatedContent) return null;
+    const regex = /# ?\[(\d+)\]/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
 
-  // `#[숫자]` 또는 `# [숫자]`를 모두 매칭하는 정규식
-  const regex = /# ?\[(\d+)\]/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
+    // \n을 실제 줄바꿈
+    const content = updatedContent.replace(/\\n/g, "\n");
 
-  while ((match = regex.exec(updatedContent)) !== null) {
-    const index = match.index;
-    const number = parseInt(match[1], 10);
+    while ((match = regex.exec(content)) !== null) {
+      const index = match.index;
+      const number = parseInt(match[1], 10);
 
-    // 플레이스홀더 이전 텍스트
-    if (lastIndex < index) {
-      parts.push(updatedContent.substring(lastIndex, index));
+      // 플레이스홀더 이전 텍스트
+      if (lastIndex < index) {
+        const text = content.substring(lastIndex, index);
+        parts.push(
+          <span
+            key={`text-${lastIndex}`}
+            style={{ whiteSpace: "pre-wrap", display: "inline" }}
+          >
+            {text}
+          </span>
+        );
+      }
+
+      // 이미지 매핑
+      const image = images[number - 1];
+      if (image) {
+        parts.push(
+          <img
+            key={`image-${number}`}
+            src={image.imageUrl}
+            alt={`Image ${number}`}
+            className="my-4 max-w-xs h-auto rounded-md object-contain"
+          />
+        );
+      } else {
+        // 이미지가 없으면 그대로 표시
+        parts.push(
+          <span
+            key={`placeholder-${number}`}
+            style={{ whiteSpace: "pre-wrap", display: "inline" }}
+          >
+            {match[0]}
+          </span>
+        );
+      }
+      lastIndex = regex.lastIndex;
     }
 
-    // 해당 번호의 이미지 가져오기
-    const image = images[number - 1];
-    if (image) {
+    // 마지막 남은 텍스트
+    if (lastIndex < content.length) {
+      const text = content.substring(lastIndex);
       parts.push(
-        <img
-          key={number}
-          src={image.imageUrl}
-          alt={`Image ${number}`}
-          className="my-4 max-w-xs h-auto rounded-md object-contain" // 이미지 크기 조정 및 스타일링
-        />
+        <span
+          key={`text-${lastIndex}`}
+          style={{ whiteSpace: "pre-wrap", display: "inline" }}
+        >
+          {text}
+        </span>
       );
-    } else {
-      // 이미지가 없으면 플레이스홀더를 그대로 출력
-      parts.push(match[0]);
     }
 
-    lastIndex = regex.lastIndex;
-  }
+    return parts;
+  };
 
-  // 마지막 남은 텍스트 추가
-  if (lastIndex < updatedContent.length) {
-    parts.push(updatedContent.substring(lastIndex));
-  }
-
-  return parts.map((part, index) => (
-    <React.Fragment key={index}>{part}</React.Fragment>
-  ));
-};
-
+  // =========================
+  // 최종 렌더
+  // =========================
+  const isUpdatedContentExist = !!updatedContent;
 
   return (
-    <div className="h-full">
+    <div className="h-screen w-full overflow-hidden bg-gray-50">
       <ResizablePanelGroup direction="horizontal">
+        {/* 사이드바 */}
+        <ResizablePanel
+          defaultSize={20}
+          minSize={15}
+          maxSize={25}
+          className="bg-gray-100 p-2 overflow-y-auto"
+        >
+          <ul className="space-y-1">
+            <li>
+              <a
+                href="/keyword"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                키워드 ㅊㅊ
+              </a>
+            </li>
+            <li>
+              <a
+                href="/title"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                제목 ㅊㅊ
+              </a>
+            </li>
+            <li>
+              <a
+                href="/traffic"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                정보성글 ㅊㅊ
+              </a>
+            </li>
+            <li>
+              <a
+                href="/feedback"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                피드백
+              </a>
+            </li>
+          </ul>
+        </ResizablePanel>
 
-          <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
-            <h2>초기 입력</h2>
-            <div>
-              <Label>키워드</Label>
+        <ResizableHandle withHandle />
+
+        {/* 메인 영역 */}
+        <ResizablePanel
+          defaultSize={80}
+          minSize={70}
+          className="p-4 flex flex-col gap-4 overflow-hidden"
+        >
+          {/* 입력 필드 */}
+          <div className="flex gap-4 p-4 items-center rounded-md shadow bg-white">
+            <div className="flex-2">
+              <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
               <Input
                 placeholder="키워드를 입력하세요"
                 value={mainkeyword}
-                onChange={(e) => setMainKeyword(e.target.value)}  
+                onChange={(e) => setMainKeyword(e.target.value)}
+                className="w-52"
               />
             </div>
-            <div>
-              <Label>제목</Label>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold mb-2">제목 입력</h2>
               <Input
                 placeholder="제목을 입력하세요"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                className="w-full"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleInitializeAndGenerateToc}>
-                초기화 및 목차 생성
+
+            {/* 
+              버튼 표시 로직:
+              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재한다면 → "컨텐츠 생성"
+              - 그 외(컨텐츠만 생성된 상태, 이미지 아직 생성 안된 상태) → "이미지 생성"
+            */}
+            {!isContentGenerated || isUpdatedContentExist ? (
+              <Button
+                onClick={handleGenerateContent}
+                disabled={progress > 0 && progress < 100}
+                className="mt-auto justify-end"
+              >
+                📝 컨텐츠 생성
               </Button>
-              <Button onClick={handleGenerateIntroductionBodyConclusion}>
-                컨텐츠 생성
-              </Button>
-              <Button onClick={handleGenerateImagePromptAndImages}>
+            ) : (
+              <Button
+                onClick={handleGenerateImagePromptAndImages}
+                disabled={progress > 0 && progress < 100}
+                className="mt-auto justify-end"
+              >
                 이미지 생성
               </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Button onClick={handleRunAll}>모든 단계 실행</Button>
-              <Button variant="destructive" onClick={handleResetStates}>
-                상태 초기화
-              </Button>
-            </div>
-            <h2>피드백</h2>
-            <Textarea className="flex-1"
-              placeholder={`더 나은 서비스를 위해 소중한 피드백 부탁드립니다!
-
-피드백 예시
-- 컨텐츠 방향: '이 부분은 ~한 느낌이에요. ~하게 수정하면 좋을 것 같아요.'
-- 이미지 관련: '이미지가 너무 ~해요. ~한 이미지면 더 좋을 것 같아요.'
-- 사용성: '복사 붙여넣기가 잘 안 돼요. 개선 부탁드립니다.'`}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-            />
-            <Button onClick={handleSaveFeedback}>피드백 전송</Button>
-          </div>
- 
-        <ResizableHandle className="bg-slate-300" />
-        <ResizablePanel
-          defaultSize={75}
-          maxSize={75}
-          className="p-4 flex flex-col gap-4"
-        >
-          <h2>Debug Panel</h2>
-          <div className="flex-1 overflow-y-auto mt-4">
-            {!updatedContent && (
-              <div className="mt-4 space-y-2 text-sm">
-                <pre><span className="font-bold text-lg">키워드:</span> {mainkeyword}</pre>
-              <pre><span className="font-bold text-lg">제목:</span> {title}</pre>
-              <pre><span className="font-bold text-lg">목차:</span> {toc}</pre>
-              <pre><span className="font-bold text-lg">서론:</span> {intro}</pre>
-              <pre><span className="font-bold text-lg">본론:</span> {body}</pre>
-              <pre><span className="font-bold text-lg">결론:</span> {conclusion}</pre>
-            </div>
             )}
-            <pre><span className="font-bold text-lg">최종 콘텐츠:</span> {renderUpdatedContent()}</pre>
-            <div className="mt-4">
-              <h3>실행 로그:</h3>
-              <div className="text-sm">
-                {debugLogs.map((log, index) => (
-                  <div key={index}>{log}</div>
-                ))}
-              </div>
+          </div>
+
+          {/* 진행도 표시 (progress > 0 일 때만) */}
+          {progress > 0 && (
+            <div className="px-4">
+              <ProgressBar progress={progress} message={progressMessage} />
             </div>
+          )}
+
+          {/* 생성된 텍스트 / 이미지 미리보기 영역 */}
+          <div className="flex-1 bg-white rounded-md shadow-md border border-gray-300 overflow-y-auto overflow-x-hidden p-4">
+            {/* 
+              (1) 아직 updatedContent가 없으면 → intro,body,conclusion 표시
+                  + "복사하기" 버튼(본문 텍스트만)
+              (2) updatedContent가 있으면 → 최종 콘텐츠 렌더링 + "텍스트 + 이미지 복사" 버튼 
+            */}
+            {/* (1) intro/body/conclusion 표시 + 복사하기 버튼 */}
+            {!isUpdatedContentExist && isContentGenerated && (
+          <div className="space-y-4">
+            <div className="space-y-2 text-sm">
+                <h3 className="font-bold mb-2 flex items-center">
+                  📑 생성된 콘텐츠
+                  <div className="flex-1"></div>
+                  <Button 
+                    className="ml-auto"
+                    onClick={handleCopyIntroBodyConclusion}
+                  >
+                    📋 복사하기
+                  </Button>
+                </h3>
+                  </div>
+                <div className="whitespace-pre-wrap break-words">
+                  📝 키워드: {mainkeyword}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  🏷️ 제목: {title}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  📚 목차: {toc}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(intro)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(body)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(conclusion)}
+                </div>
+
+                {/* "복사하기" 버튼 (intro+body+conclusion) */}
+                </div>
+            )}
+
+            {/* (2) 최종 콘텐츠 (updatedContent) 렌더링 + 텍스트+이미지 복사 버튼 */}
+            {isUpdatedContentExist && (
+              <div className="whitespace-pre-wrap break-words mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold">최종 콘텐츠:</span>
+                  <Button onClick={handleCopyUpdatedContentWithImages} className="ml-2">
+                  📋 복사하기
+                  </Button>
+                </div>
+                {renderUpdatedContent()}
+              </div>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
