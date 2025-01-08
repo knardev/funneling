@@ -19,7 +19,6 @@ import { generateBody } from "@/features/post-generation/actions/content/generat
 import { generateConclusion } from "@/features/post-generation/actions/content/generate_conclusion";
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
-
 import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,24 +34,18 @@ function ProgressBar({
   progress: number;
   message: string;
 }) {
-  // progress가 0~100 범위를 벗어나지 않도록 가드
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
   return (
     <div className="mt-3 mb-2 w-full">
-      {/* 진행 중(1~99) */}
       {progress > 0 && progress < 100 && (
         <p className="text-sm text-gray-700 mb-1 font-medium">
           {message} ({clampedProgress}%)
         </p>
       )}
-      {/* 완료(100) */}
       {progress === 100 && (
-        <p className="text-sm text-green-600 mb-1 font-medium">
-          완료되었습니다!
-        </p>
+        <p className="text-sm mb-1 font-medium">완료되었습니다!</p>
       )}
-      {/* 실제 게이지 바 (배경 gray, 진행도 blue) */}
       <div className="w-full bg-gray-300 h-3 rounded-md">
         <div
           className="bg-blue-500 h-3 rounded-md transition-all duration-300"
@@ -101,27 +94,103 @@ export function TrafficPanel() {
   // ===================
   // 4) 진행도
   // ===================
-  const [progress, setProgress] = useState(0);          // 0 ~ 100
-  const [progressMessage, setProgressMessage] = useState(""); // 현재 단계 메시지
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
 
   // ===================
   // 5) 생성 완료 여부
   // ===================
   const [isContentGenerated, setIsContentGenerated] = useState(false);
 
-  // ===================
-  // 6) 함수들
-  // ===================
-  // 편의상 기존 함수들 그대로 (initialize, toc, intro.. 등)  
-  // --------------------------------------------------
+  // =========================================
+  // 0) 전체 state 리셋 함수 (이미 존재)
+  // =========================================
+  function resetAllStates() {
+    // 생성 결과 상태 초기화
+    setSubKeywordlist(null);
+    setToc("");
+    setIntro("");
+    setBody("");
+    setConclusion("");
+    setUpdatedContent("");
+    setImagePrompts([]);
+    setImages([]);
+    setProgress(0);
+    setProgressMessage("");
+    setIsContentGenerated(false);
+  }
 
-  // 로그 추가
+  // =========================================
+  // 7) 복사 함수 추가/수정
+  // =========================================
+
+  // 7-1) intro + body + conclusion만 복사하는 함수
+  const handleCopyIntroBodyConclusion = async () => {
+    // intro, body, conclusion 문자열 합침
+    const combinedText = [intro, body, conclusion]
+      .filter((t) => t.trim().length > 0) // 빈 문자열 제거
+      .join("\n\n");
+
+    try {
+      if (!combinedText) {
+        alert("⚠️ 복사할 내용이 없습니다.");
+        return;
+      }
+      await navigator.clipboard.writeText(combinedText);
+      alert("✅ 본문(서론, 본론, 결론)이 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 본문 복사 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 7-2) 텍스트 + 이미지 복사(기존 로직 유지)
+  const handleCopyUpdatedContentWithImages = async () => {
+    try {
+      if (!updatedContent) {
+        alert("⚠️ 복사할 콘텐츠가 없습니다.");
+        return;
+      }
+
+      // 텍스트를 HTML로 변환 (줄바꿈 -> <br>)
+      let htmlContent = updatedContent.replace(/\\n/g, "\n");
+      htmlContent = htmlContent
+        .split("\n")
+        .map((line) => {
+          // 이미지 플레이스홀더 처리
+          return line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const image = images[number - 1];
+            return image
+              ? `<img src="${image.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
+              : match; // 이미지 없으면 그대로 둠
+          });
+        })
+        .join("<br>"); // 모든 줄을 다시 <br>로 결합
+
+      // HTML 포맷으로 클립보드에 복사
+      const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+
+      await navigator.clipboard.write([clipboardItem]);
+
+      alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
+    }
+  };
+
+  // ============= 기존 함수들 그대로 유지 (initializeContent, etc)
+  // --------------------------------------------------------------------------
+
   const updateLog = (message: string) => {
-    setDebugLogs((prevLogs) => [...prevLogs, `${new Date().toISOString()}: ${message}`]);
+    setDebugLogs((prevLogs) => [
+      ...prevLogs,
+      `${new Date().toISOString()}: ${message}`,
+    ]);
     console.log(message);
   };
 
-  // 줄바꿈 처리
   const renderWithLineBreaks = (text: string) => {
     return text.split("\n").map((line, index) => (
       <React.Fragment key={index}>
@@ -131,7 +200,6 @@ export function TrafficPanel() {
     ));
   };
 
-  // ========== 개별 단계 ==========
   const handleInitializeContent = async (): Promise<{
     serviceanalysis: Analysis | null;
     subkeywordlist: string[] | null;
@@ -204,7 +272,12 @@ export function TrafficPanel() {
     currentIntro: string
   ): Promise<string> => {
     updateLog("본론 생성 중...");
-    const result = await generateBody(mainkeyword, currentTitle, currentToc, currentIntro);
+    const result = await generateBody(
+      mainkeyword,
+      currentTitle,
+      currentToc,
+      currentIntro
+    );
     setBody(result.body);
     updateLog("본론 생성 완료");
     return result.body;
@@ -286,23 +359,28 @@ export function TrafficPanel() {
 
   // ========== 통합 핸들러: 컨텐츠 생성 ==========
   const handleGenerateContent = async () => {
+    // 만약 기존 updatedContent가 있다면, resetAllStates() 먼저
+    if (updatedContent) {
+      resetAllStates();
+    }
     try {
       updateLog("🔄 콘텐츠 생성 시작...");
       setProgress(10);
       setProgressMessage("컨텐츠 초기화 중...");
       const initResult = await handleInitializeContent();
 
-      // 목차
       setProgress(30);
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
 
-      // 서론
       setProgress(50);
       setProgressMessage("서론 생성 중...");
-      const introResult = await handleGenerateIntro(initResult.serviceanalysis, title, tocResult);
+      const introResult = await handleGenerateIntro(
+        initResult.serviceanalysis,
+        title,
+        tocResult
+      );
 
-      // 본론
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
@@ -312,7 +390,6 @@ export function TrafficPanel() {
         introResult
       );
 
-      // 결론
       setProgress(90);
       setProgressMessage("결론 생성 중...");
       const conclusionResult = await handleGenerateConclusion(
@@ -325,13 +402,11 @@ export function TrafficPanel() {
 
       updateLog("✅ 콘텐츠 생성 완료!");
       setIsContentGenerated(true);
-
       setProgress(100);
       setProgressMessage("컨텐츠 생성 완료!");
     } catch (error) {
       updateLog(`❌ 콘텐츠 생성 오류: ${error}`);
       console.error("콘텐츠 생성 오류:", error);
-      // 실패 시 진행도 0으로 되돌릴 수도 있음
       setProgress(0);
       setProgressMessage("");
     }
@@ -358,9 +433,7 @@ export function TrafficPanel() {
 
       setProgress(50);
       setProgressMessage("이미지 실제 생성 중...");
-      const imagesResult = await handleGenerateImages(
-        imagePromptResult.imagePrompts
-      );
+      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
 
       setProgress(80);
       setProgressMessage("최종 결과 저장 중...");
@@ -391,23 +464,21 @@ export function TrafficPanel() {
     } catch (error) {
       updateLog(`❌ 이미지 생성 오류: ${error}`);
       console.error("이미지 생성 오류:", error);
-      // 실패 시 진행도 0으로 되돌릴 수도 있음
       setProgress(0);
       setProgressMessage("");
     }
   };
 
-  // ========== 최종 콘텐츠 렌더링 (이미지 치환) ==========
+  // ========== 최종 콘텐츠 렌더링(이미지 치환) ==========
   const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
-    // #[숫자], # [숫자] 모두 매칭
     const regex = /# ?\[(\d+)\]/g;
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
-    // 이스케이프된 \n을 실제 줄바꿈으로 변환
+    // \n을 실제 줄바꿈
     const content = updatedContent.replace(/\\n/g, "\n");
 
     while ((match = regex.exec(content)) !== null) {
@@ -427,7 +498,7 @@ export function TrafficPanel() {
         );
       }
 
-      // 해당 번호의 이미지 가져오기
+      // 이미지 매핑
       const image = images[number - 1];
       if (image) {
         parts.push(
@@ -439,7 +510,7 @@ export function TrafficPanel() {
           />
         );
       } else {
-        // 이미지가 없으면 플레이스홀더 그대로 출력
+        // 이미지가 없으면 그대로 표시
         parts.push(
           <span
             key={`placeholder-${number}`}
@@ -452,7 +523,7 @@ export function TrafficPanel() {
       lastIndex = regex.lastIndex;
     }
 
-    // 마지막 남은 텍스트 추가
+    // 마지막 남은 텍스트
     if (lastIndex < content.length) {
       const text = content.substring(lastIndex);
       parts.push(
@@ -471,6 +542,8 @@ export function TrafficPanel() {
   // =========================
   // 최종 렌더
   // =========================
+  const isUpdatedContentExist = !!updatedContent;
+
   return (
     <div className="h-screen w-full overflow-hidden bg-gray-50">
       <ResizablePanelGroup direction="horizontal">
@@ -521,7 +594,6 @@ export function TrafficPanel() {
           </ul>
         </ResizablePanel>
 
-        {/* 리사이저 핸들 */}
         <ResizableHandle withHandle />
 
         {/* 메인 영역 */}
@@ -550,22 +622,23 @@ export function TrafficPanel() {
                 className="w-full"
               />
             </div>
-            {/* 컨텐츠 생성 버튼 */}
-            {!isContentGenerated && (
+
+            {/* 
+              버튼 표시 로직:
+              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재한다면 → "컨텐츠 생성"
+              - 그 외(컨텐츠만 생성된 상태, 이미지 아직 생성 안된 상태) → "이미지 생성"
+            */}
+            {!isContentGenerated || isUpdatedContentExist ? (
               <Button
                 onClick={handleGenerateContent}
-                // 진행중(progress > 0 && < 100) 이면 비활성화
                 disabled={progress > 0 && progress < 100}
                 className="mt-auto justify-end"
               >
                 📝 컨텐츠 생성
               </Button>
-            )}
-            {/* 이미지 생성 버튼 (컨텐츠 생성 완료 후에만 노출) */}
-            {isContentGenerated && (
+            ) : (
               <Button
                 onClick={handleGenerateImagePromptAndImages}
-                // 이미 진행중이면 비활성화
                 disabled={progress > 0 && progress < 100}
                 className="mt-auto justify-end"
               >
@@ -574,7 +647,7 @@ export function TrafficPanel() {
             )}
           </div>
 
-          {/* 진행도 표시 (progress > 0 일 때 표시) */}
+          {/* 진행도 표시 (progress > 0 일 때만) */}
           {progress > 0 && (
             <div className="px-4">
               <ProgressBar progress={progress} message={progressMessage} />
@@ -583,31 +656,61 @@ export function TrafficPanel() {
 
           {/* 생성된 텍스트 / 이미지 미리보기 영역 */}
           <div className="flex-1 bg-white rounded-md shadow-md border border-gray-300 overflow-y-auto overflow-x-hidden p-4">
-            <h3 className="font-bold mb-2">📑 생성된 콘텐츠</h3>
+            {/* 
+              (1) 아직 updatedContent가 없으면 → intro,body,conclusion 표시
+                  + "복사하기" 버튼(본문 텍스트만)
+              (2) updatedContent가 있으면 → 최종 콘텐츠 렌더링 + "텍스트 + 이미지 복사" 버튼 
+            */}
+            {/* (1) intro/body/conclusion 표시 + 복사하기 버튼 */}
+            {!isUpdatedContentExist && isContentGenerated && (
+          <div className="space-y-4">
             <div className="space-y-2 text-sm">
-              <div className="whitespace-pre-wrap break-words">
-                📝 키워드: {mainkeyword}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                🏷️ 제목: {title}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                📚 목차: {toc}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                {renderWithLineBreaks(intro)}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                {renderWithLineBreaks(body)}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                {renderWithLineBreaks(conclusion)}
-              </div>
-              <div className="whitespace-pre-wrap break-words">
-                <span className="font-bold">최종 콘텐츠:</span>{" "}
+                <h3 className="font-bold mb-2 flex items-center">
+                  📑 생성된 콘텐츠
+                  <div className="flex-1"></div>
+                  <Button 
+                    className="ml-auto"
+                    onClick={handleCopyIntroBodyConclusion}
+                  >
+                    📋 복사하기
+                  </Button>
+                </h3>
+                  </div>
+                <div className="whitespace-pre-wrap break-words">
+                  📝 키워드: {mainkeyword}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  🏷️ 제목: {title}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  📚 목차: {toc}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(intro)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(body)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(conclusion)}
+                </div>
+
+                {/* "복사하기" 버튼 (intro+body+conclusion) */}
+                </div>
+            )}
+
+            {/* (2) 최종 콘텐츠 (updatedContent) 렌더링 + 텍스트+이미지 복사 버튼 */}
+            {isUpdatedContentExist && (
+              <div className="whitespace-pre-wrap break-words mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold">최종 콘텐츠:</span>
+                  <Button onClick={handleCopyUpdatedContentWithImages} className="ml-2">
+                  📋 복사하기
+                  </Button>
+                </div>
                 {renderUpdatedContent()}
               </div>
-            </div>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
