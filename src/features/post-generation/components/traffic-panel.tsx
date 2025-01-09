@@ -306,8 +306,6 @@ export function TrafficPanel() {
   const handleGenerateImagePrompt = async (
     serviceanalysis: Analysis | null,
     currentContent: {
-      title: string;
-      toc: string[];
       intro: string;
       body: string;
       conclusion: string;
@@ -350,12 +348,6 @@ export function TrafficPanel() {
     }
   };
 
-  const handleSaveFeedback = async () => {
-    updateLog("피드백 전송 중...");
-    const result = await saveFeedback(feedback);
-    updateLog("피드백 전송 완료");
-    setFeedback("");
-  };
 
   // ========== 통합 핸들러: 컨텐츠 생성 ==========
   const handleGenerateContent = async () => {
@@ -420,8 +412,6 @@ export function TrafficPanel() {
       setProgressMessage("이미지 프롬프트 생성 중...");
 
       const currentContent = {
-        title,
-        toc: [toc],
         intro,
         body,
         conclusion,
@@ -445,9 +435,9 @@ export function TrafficPanel() {
           service_advantage: serviceAdvantages,
         },
         service_analysis: serviceAnalysis,
+        title,
+        toc,
         content: {
-          title,
-          toc: [toc],
           intro,
           body,
           conclusion,
@@ -549,9 +539,9 @@ export function TrafficPanel() {
       <ResizablePanelGroup direction="horizontal">
         {/* 사이드바 */}
         <ResizablePanel
-          defaultSize={20}
-          minSize={15}
-          maxSize={25}
+          defaultSize={15}  // Increased from 20 to 25
+          minSize={10}      // Increased from 10 to 15
+          maxSize={15}
           className="bg-gray-100 p-2 overflow-y-auto"
         >
           <ul className="space-y-1">
@@ -676,7 +666,7 @@ export function TrafficPanel() {
                   </Button>
                 </h3>
                   </div>
-                <div className="whitespace-pre-wrap break-words">
+                <div className="font-bold whitespace-pre-wrap break-words">
                   📝 키워드: {mainkeyword}
                 </div>
                 <div className="whitespace-pre-wrap break-words">

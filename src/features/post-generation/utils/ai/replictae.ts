@@ -121,7 +121,6 @@ async function waitForResult(prediction: PredictionResponse): Promise<string> {
 
       switch (result.status) {
         case "succeeded":
-          console.log("Prediction succeeded.", result);
           if (result.output && Array.isArray(result.output) && result.output.length > 0) {
             // result.output에 이미지 URL이 있을 경우 여기서 반환
             // 해당 모델 문서 참조 필요

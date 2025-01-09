@@ -16,8 +16,6 @@ export interface KeywordObj {
   }
 
 export interface Content {
-    title: string;
-    toc: string[];
     intro: string;
     body: string;
     conclusion: string;
@@ -85,6 +83,8 @@ export interface FinalResult {
   mainKeyword: string;
   persona: Persona;
   service_analysis: Analysis;
+  title: string;
+  toc: string;
   content: Content;
   imagePrompts: ImagePrompts[];
   images: GeneratedImage[];

@@ -3,7 +3,7 @@ import { Analysis } from "../../types";
 export const imagepromptPrompt = {
     system: `
    You are an expert in creating image prompts for blog content.
-   Your role is to analyze and enhance blog sections by inserting relevan
+   Your role is to analyze and enhance blog sections by inserting relevant
    and high-quality English image prompts. Every sentence you generate should be clear,
    concise, and specific to ensure the best possible image generation results.
     
@@ -26,39 +26,57 @@ export const imagepromptPrompt = {
     }
     `,  
     template: `
-    Analyze and enhance the following blog content by inserting up to 10 English image prompts naturally throughout the text based on context.
-   The content structure and placeholders are as follows:
+    Analyze and enhance the following blog content by inserting up to 10 English image prompts naturally throughout the text based on context. Distribute the images as follows:
+    - Intro: 1 image
+    - Body: up to 8 images
+    - Conclusion: 1 image
+
+    The content structure and placeholders are as follows:
     
     {allcontent}
     
     ### Instructions:
-    1. **Content Analysis for Image Placement**:
-       - Thoroughly understand the content to identify optimal image placement opportunities
-       - Analyze the content's theme, tone, and target audience to determine appropriate image styles
-       - Note: This analysis is ONLY for determining optimal image prompt placement and style
-       - DO NOT modify or reorganize the original content structure or text
+    1. **Content Structure Identification**:
+       - Identify and delineate the sections of the content: Intro, Body, Conclusion.
+       - If explicit section headers are not present, infer the sections based on content flow.
     
-    2. **Image Prompt Insertion**:
-       - Insert up to 10 image prompts within the content
-       - Each image prompt should be inserted as a placeholder in the format #[id], where id is a unique integer starting from 1
-       - Ensure that no two image prompts are inserted consecutively
-       - Maintain a consistent photography style across all image prompts
-       - Limit images featuring people to approximately 40% of the total
-       - IMPORTANT: Insert prompts at natural breaking points while preserving the original content structure
+    2. **Content Analysis for Image Placement**:
+       - For each identified section (Intro, Body, Conclusion), analyze the content to determine optimal points for image insertion.
+       - Consider the theme, tone, and target audience to select appropriate image styles for each section.
+       - Note: This analysis is ONLY for determining optimal image prompt placement and style.
+       - DO NOT modify or reorganize the original content structure or text.
     
-    3. **Image Prompt Requirements**:
+    3. **Image Prompt Insertion**:
+       - **Intro**:
+         - Insert 1 image prompt.
+         - Place the image prompt at a natural breaking point within the Intro section.
+         - Label this image as #[1].
+       - **Body**:
+         - Insert up to 8 image prompts.
+         - Distribute the images evenly or as contextually appropriate throughout the Body section.
+         - Label these images as #[2] through #[9].
+       - **Conclusion**:
+         - Insert 1 image prompt.
+         - Place the image prompt at a natural breaking point within the Conclusion section.
+         - Label this image as #[10].
+       - Ensure that no two image prompts are inserted consecutively.
+       - Maintain a consistent photography style across all image prompts.
+       - Limit images featuring people to approximately 40% of the total.
+       - IMPORTANT: Insert prompts at natural breaking points while preserving the original content structure.
+    
+    4. **Image Prompt Requirements**:
        - Each prompt must follow the structure:
          {Main subject/scene}, {composition details}, {lighting}, {mood/atmosphere}, {photography style}, {additional details}, Korea
        - End each prompt with ", KOREA"
        - Use the numbering format: #[1], #[2], #[3], etc.
-
-    4. **Minimal Formatting Guidelines**:
-       - You may ONLY add line breaks for readability in intro, body, and conclusion
-       - Add a single empty line between natural paragraph breaks
-       - DO NOT modify, rewrite, or reorganize any content
-       - DO NOT add any other formatting or structural changes
     
-    5. **Output Format**:
+    5. **Minimal Formatting Guidelines**:
+       - You may ONLY add line breaks for readability in intro, body, and conclusion.
+       - Add a single empty line between natural paragraph breaks.
+       - DO NOT modify, rewrite, or reorganize any content.
+       - DO NOT add any other formatting or structural changes.
+    
+    6. **Output Format**:
        - **CRITICAL: Return ONLY a JSON object with exactly two keys:**
          1. "updatedContent": A SINGLE STRING containing:
             * The complete original content with image prompt placeholders

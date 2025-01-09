@@ -18,7 +18,7 @@ import {
 } from "../types";
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 
-export function TitlePanel() {
+export function KeywordPanel() {
   // Input states
   const [mainkeyword, setMainKeyword] = useState("");
   const [subkeywords, setSubKeywords] = useState<string[]>([]);
@@ -44,7 +44,7 @@ export function TitlePanel() {
   const [isLoading, setIsLoading] = useState(false);
 
   // 스크래핑 + 제목 생성
-  const handleScrapeAndGenerateTitle = async () => {
+  const handleExtractKeywords = async () => {
     setIsLoading(true);
     setIsResultReady(false);
 
@@ -205,12 +205,12 @@ export function TitlePanel() {
                 onChange={(e) => setMainKeyword(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleScrapeAndGenerateTitle();
+                    handleExtractKeywords();
                   }
                 }}
               />
               <Button
-                onClick={handleScrapeAndGenerateTitle}
+                onClick={handleExtractKeywords}
                 disabled={isLoading}
                 variant="default"
                 className="w-full py-2 text-lg font-medium"
@@ -218,10 +218,10 @@ export function TitlePanel() {
                 {isLoading ? (
                   <>
                     <span className="animate-spin mr-2">⚪</span>
-                    제목 생성 중...
+                    키워드 추출 중...
                   </>
                 ) : (
-                  "제목 생성하기"
+                  "키워드 추출하기"
                 )}
               </Button>
             </div>
@@ -296,7 +296,7 @@ export function TitlePanel() {
                 )}
               </div>
 
-              {/* 검색 결과 (스크래핑) */}
+
               <div className="border-t pl-4 overflow-y-auto">
                 <h2 className="text-lg font-bold mb-2">검색 결과</h2>
                 {serpdata.smartBlocks.map((block: SmartBlock, i: number) => (

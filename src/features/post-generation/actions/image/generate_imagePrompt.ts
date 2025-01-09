@@ -8,7 +8,7 @@ export async function generateImagePrompt(
     content: Content,
     analysis?: Analysis,
 ) {
-    const allcontent=`${content.title}\n${content.toc}\n${content.intro}\n${content.body}\n${content.conclusion}`
+    const allcontent=`${content.intro}\n${content.body}\n${content.conclusion}`
     
     const response=await makeOpenAiRequest<{
         image_prompts:string,
@@ -25,8 +25,9 @@ export async function generateImagePrompt(
       id:id,
       prompt:prompt
     }))
+    console.log("generateImagePrompt prompt", imagepromptPrompt.generatePrompt)
     const updatedContent=response.updatedContent
-
+    console.log("generateImagePrompt 응답 데이터",updatedContent)
     console.log("generateImagePrompt 응답 데이터",promptArray)
   // 응답 데이터
   return {

@@ -9,7 +9,6 @@ export async function generateImage(
 ): Promise<{ images: GeneratedImage[] }> {
     // imagePrompts가 배열이 아닌 경우 배열로 변환
     console.log("start generateImage");
-    console.log("Received image prompts:", imagePrompts);
     const promptsArray = Array.isArray(imagePrompts) ? imagePrompts : [imagePrompts];
     
     if (promptsArray.length === 0) {
