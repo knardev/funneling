@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 서비스 계정 키 파일
+imagen3-447306-1b1050bfdb36.json
+

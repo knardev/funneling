@@ -49,24 +49,12 @@ export function KeywordPanel() {
     setIsResultReady(false);
 
     try {
-      // 1. 초기화
+      // 1. 자동완성,연관 검색어 추출  
+      // 자동완성 ㄱㄴㄷ,123,abc,로직,
       const initResult = await initializeContent(mainkeyword);
-      if (
-        initResult.subkeywordlist.relatedTerms &&
-        initResult.subkeywordlist.relatedTerms.length > 0
-      ) {
-        setSubKeywordlist(initResult.subkeywordlist.relatedTerms);
-      } else if (
-        initResult.subkeywordlist.autocompleteTerms &&
-        initResult.subkeywordlist.autocompleteTerms.length > 0
-      ) {
-        setSubKeywordlist(initResult.subkeywordlist.autocompleteTerms);
-      } else {
-        setSubKeywordlist(null);
-      }
 
       // 2. 스크래핑
-      const response = await fetch("/api/scrapping-serp-results", {
+      const response = await fetch("/api/extract-keyword-results", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -164,21 +152,39 @@ export function KeywordPanel() {
           minSize={10}      // Increased from 10 to 15
           maxSize={15} 
           className="bg-gray-100 p-2 overflow-y-auto">
-        <ul className="space-y-1 "> {/* 원하는 너비로 조정 */}
+           <ul className="space-y-1">
+            <li>
+              <a
+                href="/keyword"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                키워드 ㅊㅊ
+              </a>
+            </li>
             <li>
               <a
                 href="/title"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200  truncate"
-                style={{ backgroundColor: '#e5e7eb' }}
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
               >
                 제목 ㅊㅊ
               </a>
             </li>
             <li>
               <a
+                href="/trafficcontent"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                정보성글 ㅊㅊ
+              </a>
+            </li>
+            <li>
+              <a
                 href="/feedback"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: '#e5e7eb' }}
+                style={{ backgroundColor: "#e5e7eb" }}
               >
                 피드백
               </a>
@@ -226,6 +232,8 @@ export function KeywordPanel() {
               </Button>
             </div>
           </div>
+
+
 
           {/* 결과 섹션 */}
           {isResultReady && (

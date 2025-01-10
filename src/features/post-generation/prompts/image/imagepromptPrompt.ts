@@ -9,7 +9,7 @@ export const imagepromptPrompt = {
     
     **Prefill Json Response**
         {
-      "updatedContent": "{JUST RETURN THE CONTENT WITH IMAGE PROMPTS INSERTED}",
+      "updatedContent": "{JUST RETURN THE CONTENT WITH IMAGE LABEL INSERTED}",
 
       "image_prompts": {
           "1": "",

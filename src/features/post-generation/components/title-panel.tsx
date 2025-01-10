@@ -157,14 +157,20 @@ export function TitlePanel() {
   };
 
   return (
-    <div className="h-full">
+    <div>
+      {/* 
+        1) h-full 제거 (필요시)
+        2) 페이지 자체가 스크롤되어야 한다면 
+           body나 상위 컨테이너에서 기본 스크롤 처리를 하도록 함 
+      */}
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel 
-          defaultSize={15}  // Increased from 20 to 25
-          minSize={10}      // Increased from 10 to 15
-          maxSize={15} 
-          className="bg-gray-100 p-2 overflow-y-auto">
-        <ul className="space-y-1 "> {/* 원하는 너비로 조정 */}
+          defaultSize={15}
+          minSize={10}
+          maxSize={15}
+          className="p-2"
+        >
+          <ul className="space-y-1">
             <li>
               <a
                 href="/title"
@@ -172,6 +178,15 @@ export function TitlePanel() {
                 style={{ backgroundColor: '#e5e7eb' }}
               >
                 제목 ㅊㅊ
+              </a>
+            </li>
+            <li>
+              <a
+                href="/trafficcontent"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200  truncate"
+                style={{ backgroundColor: '#e5e7eb' }}
+              >
+                정보성글 ㅊㅊ
               </a>
             </li>
             <li>
@@ -188,11 +203,14 @@ export function TitlePanel() {
 
         <ResizableHandle />
 
-        {/* 메인 패널: 세로 스크롤 가능 */}
+        {/*
+          3) 메인 패널에서 overflow-y-auto 제거 
+             -> 필요한 경우 상위 레이아웃에서 페이지 전체 스크롤 
+        */}
         <ResizablePanel
           defaultSize={85}
           maxSize={85}
-          className="p-4 flex flex-col gap-4 overflow-y-auto"
+          className="p-4 flex flex-col gap-4"
         >
           {/* 키워드 입력 */}
           <div className="bg-white p-4 rounded-md shadow">
@@ -296,8 +314,11 @@ export function TitlePanel() {
                 )}
               </div>
 
-              {/* 검색 결과 (스크래핑) */}
-              <div className="border-t pl-4 overflow-y-auto">
+              {/*
+                4) "검색결과" 영역의 overflow-y-auto 제거 
+                   -> 페이지(혹은 상위 컨테이너) 전체 스크롤
+              */}
+              <div className="border-t pl-4">
                 <h2 className="text-lg font-bold mb-2">검색 결과</h2>
                 {serpdata.smartBlocks.map((block: SmartBlock, i: number) => (
                   <div key={i} className="mb-4">

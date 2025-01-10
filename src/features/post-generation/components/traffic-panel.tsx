@@ -83,7 +83,14 @@ export function TrafficPanel() {
   const [imagePrompts, setImagePrompts] = useState<
     { id: string; prompt: string }[]
   >([]);
+
+  // 이미지 배열 + 이미지 객체 형태(유연한 B방법)
   const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
+  // → 배열이 아니라, ID를 key로 한 객체도 보관
+  const [imagesById, setImagesById] = useState<
+    Record<string, { id: string; imageUrl: string }>
+  >({});
+
   const [feedback, setFeedback] = useState("");
 
   // ===================
@@ -115,6 +122,7 @@ export function TrafficPanel() {
     setUpdatedContent("");
     setImagePrompts([]);
     setImages([]);
+    setImagesById({});
     setProgress(0);
     setProgressMessage("");
     setIsContentGenerated(false);
@@ -137,7 +145,7 @@ export function TrafficPanel() {
         return;
       }
       await navigator.clipboard.writeText(combinedText);
-      alert("✅ 본문(서론, 본론, 결론)이 클립보드에 복사되었습니다!");
+      alert("✅ 본문이 클립보드에 복사되었습니다!");
     } catch (error) {
       console.error("❌ 복사 실패:", error);
       alert("❌ 본문 복사 중 오류가 발생했습니다.");
@@ -159,9 +167,10 @@ export function TrafficPanel() {
         .map((line) => {
           // 이미지 플레이스홀더 처리
           return line.replace(/# ?\[(\d+)\]/g, (match, number) => {
-            const image = images[number - 1];
-            return image
-              ? `<img src="${image.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
+            // 여기서도 인덱스 대신 ID 그대로 사용
+            const imageObj = imagesById[number];
+            return imageObj
+              ? `<img src="${imageObj.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
               : match; // 이미지 없으면 그대로 둠
           });
         })
@@ -306,6 +315,8 @@ export function TrafficPanel() {
   const handleGenerateImagePrompt = async (
     serviceanalysis: Analysis | null,
     currentContent: {
+      title: string;
+      toc: string[];
       intro: string;
       body: string;
       conclusion: string;
@@ -327,12 +338,27 @@ export function TrafficPanel() {
     };
   };
 
+  /**
+   *  [핵심 변경]
+   *  기존에는 images 배열만 관리했지만, 추가로 imagesById 객체에
+   *  id를 key로 매핑하여 저장한다.
+   */
   const handleGenerateImages = async (
     imagePromptsData: { id: string; prompt: string }[]
   ): Promise<{ id: string; imageUrl: string }[]> => {
     updateLog("이미지 실제 생성 중...");
     const result = await generateImage(imagePromptsData);
+
+    // 배열 상태
     setImages(result.images);
+
+    // 객체 형태로도 변환해서 보관
+    const objMap: Record<string, { id: string; imageUrl: string }> = {};
+    result.images.forEach((img) => {
+      objMap[img.id] = img;
+    });
+    setImagesById(objMap);
+
     updateLog("이미지 생성 완료");
     return result.images;
   };
@@ -348,6 +374,12 @@ export function TrafficPanel() {
     }
   };
 
+  const handleSaveFeedback = async () => {
+    updateLog("피드백 전송 중...");
+    const result = await saveFeedback(feedback);
+    updateLog("피드백 전송 완료");
+    setFeedback("");
+  };
 
   // ========== 통합 핸들러: 컨텐츠 생성 ==========
   const handleGenerateContent = async () => {
@@ -363,7 +395,10 @@ export function TrafficPanel() {
 
       setProgress(30);
       setProgressMessage("목차 생성 중...");
-      const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+      const tocResult = await handleGenerateToc(
+        initResult.serviceanalysis,
+        title
+      );
 
       setProgress(50);
       setProgressMessage("서론 생성 중...");
@@ -412,6 +447,8 @@ export function TrafficPanel() {
       setProgressMessage("이미지 프롬프트 생성 중...");
 
       const currentContent = {
+        title,
+        toc: [toc],
         intro,
         body,
         conclusion,
@@ -423,7 +460,9 @@ export function TrafficPanel() {
 
       setProgress(50);
       setProgressMessage("이미지 실제 생성 중...");
-      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
+      const imagesResult = await handleGenerateImages(
+        imagePromptResult.imagePrompts
+      );
 
       setProgress(80);
       setProgressMessage("최종 결과 저장 중...");
@@ -460,6 +499,11 @@ export function TrafficPanel() {
   };
 
   // ========== 최종 콘텐츠 렌더링(이미지 치환) ==========
+  /**
+   * [핵심 변경]
+   * 기존: const image = images[number - 1];
+   * 변경: const image = imagesById[number.toString()];
+   */
   const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
@@ -473,7 +517,7 @@ export function TrafficPanel() {
 
     while ((match = regex.exec(content)) !== null) {
       const index = match.index;
-      const number = parseInt(match[1], 10);
+      const number = match[1]; // 문자열 그대로 두고 나중에 .toString() 없이 사용 가능
 
       // 플레이스홀더 이전 텍스트
       if (lastIndex < index) {
@@ -488,13 +532,13 @@ export function TrafficPanel() {
         );
       }
 
-      // 이미지 매핑
-      const image = images[number - 1];
-      if (image) {
+      // 이미지 매핑 (유연한 방식)
+      const imageObj = imagesById[number];
+      if (imageObj) {
         parts.push(
           <img
             key={`image-${number}`}
-            src={image.imageUrl}
+            src={imageObj.imageUrl}
             alt={`Image ${number}`}
             className="my-4 max-w-xs h-auto rounded-md object-contain"
           />
@@ -535,25 +579,16 @@ export function TrafficPanel() {
   const isUpdatedContentExist = !!updatedContent;
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gray-50">
+    <div>
       <ResizablePanelGroup direction="horizontal">
         {/* 사이드바 */}
         <ResizablePanel
-          defaultSize={15}  // Increased from 20 to 25
-          minSize={10}      // Increased from 10 to 15
+          defaultSize={15}
+          minSize={10}
           maxSize={15}
-          className="bg-gray-100 p-2 overflow-y-auto"
+          className=" p-2 overflow-y-auto"
         >
           <ul className="space-y-1">
-            <li>
-              <a
-                href="/keyword"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                키워드 ㅊㅊ
-              </a>
-            </li>
             <li>
               <a
                 href="/title"
@@ -565,7 +600,7 @@ export function TrafficPanel() {
             </li>
             <li>
               <a
-                href="/traffic"
+                href="/trafficcontent"
                 className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
                 style={{ backgroundColor: "#e5e7eb" }}
               >
@@ -584,12 +619,12 @@ export function TrafficPanel() {
           </ul>
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        <ResizableHandle />
 
         {/* 메인 영역 */}
         <ResizablePanel
-          defaultSize={80}
-          minSize={70}
+          defaultSize={85}
+          maxSize={85}
           className="p-4 flex flex-col gap-4 overflow-hidden"
         >
           {/* 입력 필드 */}
@@ -615,7 +650,7 @@ export function TrafficPanel() {
 
             {/* 
               버튼 표시 로직:
-              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재한다면 → "컨텐츠 생성"
+              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재하면 → "컨텐츠 생성"
               - 그 외(컨텐츠만 생성된 상태, 이미지 아직 생성 안된 상태) → "이미지 생성"
             */}
             {!isContentGenerated || isUpdatedContentExist ? (
@@ -645,34 +680,31 @@ export function TrafficPanel() {
           )}
 
           {/* 생성된 텍스트 / 이미지 미리보기 영역 */}
-          <div className="flex-1 bg-white rounded-md shadow-md border border-gray-300 overflow-y-auto overflow-x-hidden p-4">
+          <div className="flex-1 bg-white rounded-md ">
             {/* 
               (1) 아직 updatedContent가 없으면 → intro,body,conclusion 표시
                   + "복사하기" 버튼(본문 텍스트만)
-              (2) updatedContent가 있으면 → 최종 콘텐츠 렌더링 + "텍스트 + 이미지 복사" 버튼 
+              (2) updatedContent가 있으면 → 최종 콘텐츠 렌더링 + "텍스트 +이미지 복사" 버튼
             */}
             {/* (1) intro/body/conclusion 표시 + 복사하기 버튼 */}
             {!isUpdatedContentExist && isContentGenerated && (
-          <div className="space-y-4">
-            <div className="space-y-2 text-sm">
-                <h3 className="font-bold mb-2 flex items-center">
-                  📑 생성된 콘텐츠
-                  <div className="flex-1"></div>
-                  <Button 
-                    className="ml-auto"
-                    onClick={handleCopyIntroBodyConclusion}
-                  >
-                    📋 복사하기
-                  </Button>
-                </h3>
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  <h3 className="font-bold mb-2 flex items-center">
+                    📑 생성된 콘텐츠
+                    <div className="flex-1"></div>
+                    <Button className="ml-auto" onClick={handleCopyIntroBodyConclusion}>
+                      📋 복사하기
+                    </Button>
+                  </h3>
+                </div>
                 <div className="font-bold whitespace-pre-wrap break-words">
                   📝 키워드: {mainkeyword}
                 </div>
-                <div className="whitespace-pre-wrap break-words">
+                <div className="font-bold whitespace-pre-wrap break-words">
                   🏷️ 제목: {title}
                 </div>
-                <div className="whitespace-pre-wrap break-words">
+                <div className="font-bold whitespace-pre-wrap break-words">
                   📚 목차: {toc}
                 </div>
                 <div className="whitespace-pre-wrap break-words">
@@ -684,9 +716,7 @@ export function TrafficPanel() {
                 <div className="whitespace-pre-wrap break-words">
                   {renderWithLineBreaks(conclusion)}
                 </div>
-
-                {/* "복사하기" 버튼 (intro+body+conclusion) */}
-                </div>
+              </div>
             )}
 
             {/* (2) 최종 콘텐츠 (updatedContent) 렌더링 + 텍스트+이미지 복사 버튼 */}
@@ -695,7 +725,7 @@ export function TrafficPanel() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold">최종 콘텐츠:</span>
                   <Button onClick={handleCopyUpdatedContentWithImages} className="ml-2">
-                  📋 복사하기
+                    📋 복사하기
                   </Button>
                 </div>
                 {renderUpdatedContent()}

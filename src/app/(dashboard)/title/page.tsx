@@ -11,7 +11,7 @@ export default function Page() {
       </h1>
 
       {/* 전체 페이지 스크롤 가능 */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         <TitlePanel />
       </div>
     </div>
