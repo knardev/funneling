@@ -81,7 +81,9 @@ export function TitlePanel() {
       const { smartBlocks } = await response.json();
       if (!smartBlocks || smartBlocks.length === 0) {
         setIsLoading(false);
-        return;
+        setIsResultReady(true);
+        setScrapingResults([]); // 검색 결과 없는 상태
+        return;                 // 더 이상 진행하지 않음
       }
 
       const validSmartBlocks = smartBlocks.filter(
@@ -130,6 +132,14 @@ export function TitlePanel() {
         []
       );
 
+      // 그룹화한 결과도 비어있다면 안내 후 종료
+      if (groupedResults.length === 0) {
+        setScrapingResults([]);
+        setIsLoading(false);
+        setIsResultReady(true);
+        return;
+      }
+
       setScrapingResults(groupedResults);
 
       // 3. 제목 생성
@@ -156,13 +166,8 @@ export function TitlePanel() {
     }
   };
 
-  return (
+ return (
     <div>
-      {/* 
-        1) h-full 제거 (필요시)
-        2) 페이지 자체가 스크롤되어야 한다면 
-           body나 상위 컨테이너에서 기본 스크롤 처리를 하도록 함 
-      */}
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel 
           defaultSize={15}
@@ -203,10 +208,6 @@ export function TitlePanel() {
 
         <ResizableHandle />
 
-        {/*
-          3) 메인 패널에서 overflow-y-auto 제거 
-             -> 필요한 경우 상위 레이아웃에서 페이지 전체 스크롤 
-        */}
         <ResizablePanel
           defaultSize={85}
           maxSize={85}
@@ -248,94 +249,100 @@ export function TitlePanel() {
           {/* 결과 섹션 */}
           {isResultReady && (
             <>
-              {/* 제목 섹션: 가로 스크롤 */}
-              <div className="border rounded-md p-4">
-                <h2 className="text-lg font-bold mb-4">제목 추천</h2>
-                <div className="flex space-x-4 overflow-x-auto">
-                  {/* 상위 패턴 */}
-                  {strictTitles.length > 0 && (
-                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
-                      <h3 className="font-bold mb-2">상위 패턴 제목</h3>
-                      <ul className="list-disc ml-4 space-y-1">
-                        {strictTitles.map((title, index) => (
-                          <li key={index}>
-                            {index + 1}. {title}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* 서브 키워드 활용 */}
-                  {creativeTitles.length > 0 && (
-                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
-                      <h3 className="font-bold mb-2">서브 키워드 활용</h3>
-                      <ul className="list-disc ml-4 space-y-1">
-                        {creativeTitles.map((title, index) => (
-                          <li key={index}>
-                            {index + 1}. {title}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* 결핍 자극 */}
-                  {styleTitles.length > 0 && (
-                    <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3">
-                      <h3 className="font-bold mb-2">결핍 자극 제목</h3>
-                      <ul className="list-disc ml-4 space-y-1">
-                        {styleTitles.map((title, index) => (
-                          <li key={index}>
-                            {index + 1}. {title}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+              {/* scrapingResults가 비어있으면 안내 문구 */}
+              {scrapingResults.length === 0 ? (
+                <div className="text-red-500 font-bold my-4">
+                  검색 결과 첫 페이지에 블로그가 없습니다
                 </div>
+              ) : (
+                <>
+                  {/* 제목 섹션: 가로 스크롤 */}
+                  <div className="border rounded-md p-4">
+                    <h2 className="text-lg font-bold">제목 추천</h2>
+                    <div className="flex space-x-4 overflow-x-auto">
+                      {/* 상위 패턴 */}
+                      {strictTitles.length > 0 && (
+                        <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
+                          <h3 className="font-bold mb-2">상위 패턴 제목</h3>
+                          <ul className="list-disc ml-4 space-y-1">
+                            {strictTitles.map((title, index) => (
+                              <li key={index}>
+                                {index + 1}. {title}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                {/* 서브 키워드 */}
-                {subkeywordlist && subkeywordlist.length > 0 && (
-                  <div className="border-t mt-4 pt-3">
-                    <h3 className="font-bold mb-2">서브 키워드</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {subkeywordlist.map((keyword, index) => (
-                        <span
-                          key={index}
-                          className="inline-block px-4 py-1 bg-gray-200 text-sm rounded-md border border-gray-300 shadow-sm"
-                          style={{ backgroundColor: '#e5e7eb' }}
-                        >
-                          {keyword}
-                        </span>
-                      ))}
+                      {/* 서브 키워드 활용 */}
+                      {creativeTitles.length > 0 && (
+                        <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3 mr-2">
+                          <h3 className="font-bold mb-2">서브 키워드 활용</h3>
+                          <ul className="list-disc ml-4 space-y-1">
+                            {creativeTitles.map((title, index) => (
+                              <li key={index}>
+                                {index + 1}. {title}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 결핍 자극 */}
+                      {styleTitles.length > 0 && (
+                        <div className="border rounded-md p-3 min-w-[300px] flex-shrink-0 m-3">
+                          <h3 className="font-bold mb-2">결핍 자극 제목</h3>
+                          <ul className="list-disc ml-4 space-y-1">
+                            {styleTitles.map((title, index) => (
+                              <li key={index}>
+                                {index + 1}. {title}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
 
-              {/*
-                4) "검색결과" 영역의 overflow-y-auto 제거 
-                   -> 페이지(혹은 상위 컨테이너) 전체 스크롤
-              */}
-              <div className="border-t pl-4">
-                <h2 className="text-lg font-bold mb-2">검색 결과</h2>
-                {serpdata.smartBlocks.map((block: SmartBlock, i: number) => (
-                  <div key={i} className="mb-4">
-                    <h4 className="font-bold">
-                      {block.index}번째 탭: {block.type || "알 수 없는 타입"}
-                    </h4>
-                    <ul className="list-disc ml-4">
-                      {block.items?.map((item: SmartBlockItem, rank: number) => (
-                        <li key={rank}>
-                          {rank + 1}. {item.postTitle || "제목 없음"}
-                        </li>
-                      ))}
-                    </ul>
-                    <br></br>
+                    {/* 서브 키워드 */}
+                    {subkeywordlist && subkeywordlist.length > 0 && (
+                      <div className="border-t mt-4 pt-3">
+                        <h3 className="font-bold mb-2">서브 키워드</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {subkeywordlist.map((keyword, index) => (
+                            <span
+                              key={index}
+                              className="inline-block px-4 py-1 bg-gray-200 text-sm rounded-md border border-gray-300 shadow-sm"
+                              style={{ backgroundColor: '#e5e7eb' }}
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  {/* 검색 결과 영역 */}
+                  <div className="border-t pl-4">
+                    <h2 className="text-lg font-bold mb-2">검색 결과</h2>
+                    {serpdata.smartBlocks.map((block: SmartBlock, i: number) => (
+                      <div key={i} className="mb-4">
+                        <h4 className="font-bold">
+                          {block.index}번째 탭: {block.type || "알 수 없는 타입"}
+                        </h4>
+                        <ul className="list-disc ml-4">
+                          {block.items?.map((item: SmartBlockItem, rank: number) => (
+                            <li key={rank}>
+                              {rank + 1}. {item.postTitle || "제목 없음"}
+                            </li>
+                          ))}
+                        </ul>
+                        <br></br>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </ResizablePanel>
