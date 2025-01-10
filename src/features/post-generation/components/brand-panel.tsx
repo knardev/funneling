@@ -58,8 +58,6 @@ export function BrandPanel() {
 
 
   const content = {
-    title,
-    toc : [toc],
     intro,
     body,
     conclusion
@@ -138,8 +136,6 @@ export function BrandPanel() {
   const handleGenerateImagePrompt = async () => {
     updateLog("Generating image prompts...");
     const result = await generateImagePrompt({
-      title,
-      toc : [toc],
       intro,
       body,
       conclusion,
@@ -167,6 +163,8 @@ export function BrandPanel() {
       mainKeyword:mainkeyword,
       persona,
       service_analysis:serviceAnalysis,
+      title,
+      toc,
       content,
       imagePrompts,
       images,
@@ -260,8 +258,6 @@ export function BrandPanel() {
       updateLog("Generating image prompts...");
       const imagePromptResult = await generateImagePrompt(
         {
-          title: title,
-          toc: [tocResult.toc],
           intro: introResult.intro,
           body: bodyResult.body,
           conclusion: conclusionResult.conclusion,
@@ -284,9 +280,9 @@ export function BrandPanel() {
         mainKeyword:mainkeyword,
         persona,
         service_analysis: initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
+        title: title,
+        toc: tocResult.toc,
         content: {
-          title: title,
-          toc: [tocResult.toc],
           intro: introResult.intro,
           body: bodyResult.body,
           conclusion: conclusionResult.conclusion,

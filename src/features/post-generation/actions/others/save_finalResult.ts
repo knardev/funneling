@@ -16,7 +16,7 @@ export async function saveFinalResult(
 ) {
   const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-  const tocString = finalResult.content.toc.join(',');
+
 
   try {
     // 1. post_generations 테이블에 데이터 삽입
@@ -28,8 +28,8 @@ export async function saveFinalResult(
       industry_analysis: finalResult.service_analysis.industry_analysis || null,
       advantage_analysis: finalResult.service_analysis.advantage_analysis || null,
       target_needs: finalResult.service_analysis.target_needs || null,
-      title: finalResult.content.title,
-      toc: tocString,
+      title: finalResult.title,
+      toc: finalResult.toc,
       intro: finalResult.content.intro,
       body: finalResult.content.body,
       conclusion: finalResult.content.conclusion,

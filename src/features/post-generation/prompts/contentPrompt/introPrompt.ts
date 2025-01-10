@@ -19,7 +19,7 @@ export const introPrompt = {
 
     Here's the blog style of Naver Blog:
 
-    # 네이버 블로그 말투 특징 분석
+    # 네이버 블로그 말투 특징
         
         ## 1. 종결어미 스타일
         - 친근한 구어체 '-요' 종결

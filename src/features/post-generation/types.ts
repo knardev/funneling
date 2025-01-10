@@ -16,8 +16,6 @@ export interface KeywordObj {
   }
 
 export interface Content {
-    title: string;
-    toc: string[];
     intro: string;
     body: string;
     conclusion: string;
@@ -71,6 +69,13 @@ export interface PredictionResponse {
   };
 }
 
+// src/types.ts
+
+export interface VertexAIImageResponse {
+  images?: { url: string }[]; // 현재 사용되지 않으므로 삭제 가능
+  output?: string; // Base64 인코딩된 이미지 데이터
+}
+
 export interface ImagePrompts {
   id: string;
   prompt: string;
@@ -85,6 +90,8 @@ export interface FinalResult {
   mainKeyword: string;
   persona: Persona;
   service_analysis: Analysis;
+  title: string;
+  toc: string;
   content: Content;
   imagePrompts: ImagePrompts[];
   images: GeneratedImage[];
