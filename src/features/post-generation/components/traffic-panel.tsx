@@ -589,6 +589,15 @@ export function TrafficPanel() {
           className=" p-2 overflow-y-auto"
         >
           <ul className="space-y-1">
+          <li>
+              <a
+                href="/keyword"
+                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
+                style={{ backgroundColor: "#e5e7eb" }}
+              >
+                키워드 ㅊㅊ
+              </a>
+            </li>
             <li>
               <a
                 href="/title"

@@ -33,47 +33,11 @@ const { fetchGeneralSearch, fetchAutocomplete } = naverUtils;
 
 
 
-const extractRelatedSearchTerms = (html: string) => {
-  const relatedTerms: string[] = [];
 
-  try {
-    const relatedSrchPattern = /<ul class="lst_related_srch[^"]*"[\s\S]*?<\/ul>/g;
-    const relatedSrchMatch = html.match(relatedSrchPattern);
-
-    if (relatedSrchMatch) {
-      const listHtml = relatedSrchMatch[0];
-      const itemPattern = /<li class="item"[\s\S]*?<div class="tit">([\s\S]*?)<\/div>/g;
-      let itemMatch;
-
-      // 모든 item의 tit 내용을 추출
-      while ((itemMatch = itemPattern.exec(listHtml)) !== null) {
-        const term = itemMatch[1].trim();
-        if (term) {
-          relatedTerms.push(term);
-        }
-      }
-    }
-
-    return relatedTerms;
-  } catch (error) {
-    console.error('Error parsing HTML:', error);
-    return relatedTerms;
-  }
-};
-
-const removeHTMLTags = (text: string) => {
-  if (!text) return '';
-  
-  return text
-    .replace(/<[^>]*>/g, '')
-    .replace(/,\s*,/g, ', ')
-    .trim();
-};
 
 async function getSearchData(keyword: string) {
   console.log("getSearchData 시작 -키워드:", keyword);
   const html1 = await fetchGeneralSearch(keyword);
-  console.log('HTML 데이터 받음, 길이:', html1.length);
   
   const processRelatedTerms = (html1: string) => {
     console.log('processRelatedTerms 시작');
@@ -130,6 +94,43 @@ async function extractAutocomplete(keyword: string) {
   }
 }
 
+//연관검색어 추출
+const extractRelatedSearchTerms = (html: string) => {
+  const relatedTerms: string[] = [];
+
+  try {
+    const relatedSrchPattern = /<ul class="lst_related_srch[^"]*"[\s\S]*?<\/ul>/g;
+    const relatedSrchMatch = html.match(relatedSrchPattern);
+
+    if (relatedSrchMatch) {
+      const listHtml = relatedSrchMatch[0];
+      const itemPattern = /<li class="item"[\s\S]*?<div class="tit">([\s\S]*?)<\/div>/g;
+      let itemMatch;
+
+      // 모든 item의 tit 내용을 추출
+      while ((itemMatch = itemPattern.exec(listHtml)) !== null) {
+        const term = itemMatch[1].trim();
+        if (term) {
+          relatedTerms.push(term);
+        }
+      }
+    }
+
+    return relatedTerms;
+  } catch (error) {
+    console.error('Error parsing HTML:', error);
+    return relatedTerms;
+  }
+};
+
+const removeHTMLTags = (text: string) => {
+  if (!text) return '';
+  
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/,\s*,/g, ', ')
+    .trim();
+};
 
 
 async function analyzeService(persona: Persona): Promise<Analysis> {
