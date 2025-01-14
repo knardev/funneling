@@ -18,8 +18,6 @@ export async function generateIntro(
     analysis
   );
 
-  // 실행된 prompt 출력
-  console.log("Generated Prompt:", generatedPrompt);
 
   const response = await makeClaudeRequest<{
     optimized_intro: string;

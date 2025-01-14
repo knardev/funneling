@@ -17,6 +17,7 @@ import {
   ScrapingResults,
 } from "../types";
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
+import { SidePanel } from "./side-panel";
 
 export function TitlePanel() {
   // Input states
@@ -169,6 +170,7 @@ export function TitlePanel() {
  return (
     <div>
       <ResizablePanelGroup direction="horizontal">
+<<<<<<< HEAD
         <ResizablePanel 
           defaultSize={15}
           minSize={10}
@@ -205,6 +207,10 @@ export function TitlePanel() {
             </li>
           </ul>
         </ResizablePanel> 
+=======
+        {/* 사이드바 */}
+        <SidePanel />
+>>>>>>> dev_3
 
         <ResizableHandle />
 
