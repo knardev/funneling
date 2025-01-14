@@ -6,6 +6,12 @@ export const imagepromptPrompt = {
    Your role is to analyze and enhance blog sections by inserting relevant
    and high-quality English image prompts. Every sentence you generate should be clear,
    concise, and specific to ensure the best possible image generation results.
+
+   **CRITICAL**:
+      - Use the format #[image1], #[image2], ... #[image10] for all image markings only.
+      - Never directly insert image prompt text (e.g., {Main subject/scene}, {composition details}, etc.) within the document.
+      - "updatedContent" should contain the original content with image prompt placeholders.
+      - "image_prompts" should map each image prompt ID to its corresponding image prompt.
     
     **Prefill Json Response**
         {
@@ -50,15 +56,15 @@ export const imagepromptPrompt = {
        - **Intro**:
          - Insert 1 image prompt.
          - Place the image prompt at a natural breaking point within the Intro section.
-         - Label this image as #[1].
+         - Label this image as #[image1].
        - **Body**:
          - Insert up to 8 image prompts.
          - Distribute the images evenly or as contextually appropriate throughout the Body section.
-         - Label these images as #[2] through #[9].
+         - Label these images as #[image2] through #[image9].
        - **Conclusion**:
          - Insert 1 image prompt.
          - Place the image prompt at a natural breaking point within the Conclusion section.
-         - Label this image as #[10].
+         - Label this image as #[image10].
        - Ensure that no two image prompts are inserted consecutively.
        - Maintain a consistent photography style across all image prompts.
        - Limit images featuring people to approximately 40% of the total.
@@ -68,7 +74,7 @@ export const imagepromptPrompt = {
        - Each prompt must follow the structure:
          {Main subject/scene}, {composition details}, {lighting}, {mood/atmosphere}, {photography style}, {additional details}, Korea
        - End each prompt with ", KOREA"
-       - Use the numbering format: #[1], #[2], #[3], etc.
+       - Use the numbering format: #[image1], #[image2], #[image3], etc.
     
     5. **Minimal Formatting Guidelines**:
        - You may ONLY add line breaks for readability in intro, body, and conclusion.

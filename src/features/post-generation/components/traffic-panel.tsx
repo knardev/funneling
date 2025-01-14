@@ -10,8 +10,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
-// Import your server actions
+// [추가] JSZip, file-saver
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
+// Import your server actions (기존 그대로)
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 import { generateToc } from "@/features/post-generation/actions/content/generate_toc";
 import { generateIntro } from "@/features/post-generation/actions/content/generate_intro";
@@ -21,12 +26,10 @@ import { generateImagePrompt } from "@/features/post-generation/actions/image/ge
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
-import { Textarea } from "@/components/ui/textarea";
 import { saveFeedback } from "../actions/others/saveFeedback";
+import { SidePanel } from "./side-panel";
 
-/* ==========================
-   1) 진행도 표시 컴포넌트
-   ========================== */
+// 진행도 표시 컴포넌트 (기존 그대로)
 function ProgressBar({
   progress,
   message,
@@ -84,9 +87,8 @@ export function TrafficPanel() {
     { id: string; prompt: string }[]
   >([]);
 
-  // 이미지 배열 + 이미지 객체 형태(유연한 B방법)
+  // 이미지 배열 + 이미지 객체 형태(유연한 방법)
   const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
-  // → 배열이 아니라, ID를 key로 한 객체도 보관
   const [imagesById, setImagesById] = useState<
     Record<string, { id: string; imageUrl: string }>
   >({});
@@ -110,7 +112,7 @@ export function TrafficPanel() {
   const [isContentGenerated, setIsContentGenerated] = useState(false);
 
   // =========================================
-  // 0) 전체 state 리셋 함수 (이미 존재)
+  // 0) 전체 state 리셋 함수
   // =========================================
   function resetAllStates() {
     // 생성 결과 상태 초기화
@@ -128,15 +130,64 @@ export function TrafficPanel() {
     setIsContentGenerated(false);
   }
 
+
   // =========================================
-  // 7) 복사 함수 추가/수정
+// [추가] 후처리 함수
+// =========================================
+function postProcessUpdatedContent(rawContent: string): string {
+  let content = rawContent;
+
+  // -------------------------------------
+  // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
+  //    (이건 건드리지 않기 위함)
+  // -------------------------------------
+  const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
+  const correctPlaceholders: string[] = [];
+
+  // 임시 교체 (예: #[image3] => "@@@CORRECT_PLACEHOLDER@@@0"
+  content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
+    correctPlaceholders.push(match); // 실제 문자열 저장
+    return CORRECT_MARKER + (correctPlaceholders.length - 1);
+  });
+
+  // -------------------------------------
+  // 2) 잘못된 placeholder들만 교정
+  //    (#1, [2], [image3], #(4), # (5) 등)
+  //    ※ 일반 숫자(예: 2.0, 2024)는 "#", "[" 가 없으니 매칭 안 됨
+  // -------------------------------------
+  content = content.replace(
+    /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
+    (_, g1, g2, g3) => {
+      const imageNum = g1 || g2 || g3;
+      return `#[image${imageNum}]`;
+    }
+  );
+
+  // -------------------------------------
+  // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
+  // -------------------------------------
+  content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
+    return correctPlaceholders[parseInt(idx, 10)];
+  });
+
+  // -------------------------------------
+  // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
+  // -------------------------------------
+  content = content.replace(
+    /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
+    "$1"
+  );
+
+  return content;
+}
+  // =========================================
+  // 7) 복사 함수
   // =========================================
 
-  // 7-1) intro + body + conclusion만 복사하는 함수
+  // 7-1) intro + body + conclusion만 복사
   const handleCopyIntroBodyConclusion = async () => {
-    // intro, body, conclusion 문자열 합침
     const combinedText = [intro, body, conclusion]
-      .filter((t) => t.trim().length > 0) // 빈 문자열 제거
+      .filter((t) => t.trim().length > 0)
       .join("\n\n");
 
     try {
@@ -152,34 +203,28 @@ export function TrafficPanel() {
     }
   };
 
-  // 7-2) 텍스트 + 이미지 복사(기존 로직 유지)
+  // 7-2) 텍스트 + 이미지 복사
   const handleCopyUpdatedContentWithImages = async () => {
     try {
       if (!updatedContent) {
         alert("⚠️ 복사할 콘텐츠가 없습니다.");
         return;
       }
-
-      // 텍스트를 HTML로 변환 (줄바꿈 -> <br>)
       let htmlContent = updatedContent.replace(/\\n/g, "\n");
       htmlContent = htmlContent
         .split("\n")
-        .map((line) => {
-          // 이미지 플레이스홀더 처리
-          return line.replace(/# ?\[(\d+)\]/g, (match, number) => {
-            // 여기서도 인덱스 대신 ID 그대로 사용
+        .map((line) =>
+          line.replace(/# ?\[(\d+)\]/g, (match, number) => {
             const imageObj = imagesById[number];
             return imageObj
               ? `<img src="${imageObj.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
-              : match; // 이미지 없으면 그대로 둠
-          });
-        })
-        .join("<br>"); // 모든 줄을 다시 <br>로 결합
+              : match;
+          })
+        )
+        .join("<br>");
 
-      // HTML 포맷으로 클립보드에 복사
       const htmlBlob = new Blob([htmlContent], { type: "text/html" });
       const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
-
       await navigator.clipboard.write([clipboardItem]);
 
       alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
@@ -189,9 +234,65 @@ export function TrafficPanel() {
     }
   };
 
-  // ============= 기존 함수들 그대로 유지 (initializeContent, etc)
-  // --------------------------------------------------------------------------
+  // =========================
+  // [추가] 다운로드 관련 함수
+  // =========================
 
+  /**
+   * (1) updatedContent를 txt 파일로 다운로드
+   */
+  const handleDownloadTxt = () => {
+    if (!updatedContent) {
+      alert("⚠️ 다운로드할 텍스트가 없습니다.");
+      return;
+    }
+
+    try {
+      // 이미 state에 저장된 updatedContent가 후처리된 상태이므로 그대로 사용
+      const blob = new Blob([updatedContent], {
+        type: "text/plain;charset=utf-8",
+      });
+      saveAs(blob, "content.txt");
+    } catch (error) {
+      console.error("❌ TXT 다운로드 실패:", error);
+      alert("❌ TXT 다운로드 중 오류가 발생했습니다.");
+    }
+  };
+
+  /**
+   * (2) images[]를 zip으로 묶어 다운로드
+   *     이미지 파일명: 1.png, 2.png, 3.png ... 순서대로
+   */
+  const handleDownloadImagesZip = async () => {
+    if (!images || images.length === 0) {
+      alert("⚠️ 다운로드할 이미지가 없습니다.");
+      return;
+    }
+    try {
+      const zip = new JSZip();
+      let index = 1;
+
+      for (const img of images) {
+        // 이미지 데이터를 직접 fetch -> arrayBuffer
+        const response = await fetch(img.imageUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        // zip 객체에 파일 추가
+        zip.file(`${index}.png`, arrayBuffer);
+        index++;
+      }
+
+      // zip Blob 생성
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "images.zip");
+    } catch (error) {
+      console.error("❌ 이미지 ZIP 다운로드 실패:", error);
+      alert("❌ 이미지 ZIP 다운로드 중 오류가 발생했습니다.");
+    }
+  };
+
+  // =========================================
+  // 기존 함수들 (initializeContent 등)
+  // =========================================
   const updateLog = (message: string) => {
     setDebugLogs((prevLogs) => [
       ...prevLogs,
@@ -327,22 +428,24 @@ export function TrafficPanel() {
   }> => {
     updateLog("이미지 프롬프트 생성 중...");
     const result = await generateImagePrompt(currentContent);
+    // ---------- [추가] 후처리 로직 적용 ----------
+    let processedContent = "";
     if (result.updatedContent) {
-      setUpdatedContent(result.updatedContent);
+      // 1) 후처리
+      processedContent = postProcessUpdatedContent(result.updatedContent);
+      // 2) state에 최종 정리된 content 저장
+      setUpdatedContent(processedContent);
     }
+
     setImagePrompts(result.imagePrompts);
     updateLog("이미지 프롬프트 생성 완료");
+
     return {
-      updatedContent: result.updatedContent || "",
+      updatedContent: processedContent || "",
       imagePrompts: result.imagePrompts,
     };
   };
 
-  /**
-   *  [핵심 변경]
-   *  기존에는 images 배열만 관리했지만, 추가로 imagesById 객체에
-   *  id를 key로 매핑하여 저장한다.
-   */
   const handleGenerateImages = async (
     imagePromptsData: { id: string; prompt: string }[]
   ): Promise<{ id: string; imageUrl: string }[]> => {
@@ -381,9 +484,10 @@ export function TrafficPanel() {
     setFeedback("");
   };
 
-  // ========== 통합 핸들러: 컨텐츠 생성 ==========
+  // =========================================
+  // 통합 핸들러: 컨텐츠 생성
+  // =========================================
   const handleGenerateContent = async () => {
-    // 만약 기존 updatedContent가 있다면, resetAllStates() 먼저
     if (updatedContent) {
       resetAllStates();
     }
@@ -399,6 +503,7 @@ export function TrafficPanel() {
         initResult.serviceanalysis,
         title
       );
+      console.log("title", title);
 
       setProgress(50);
       setProgressMessage("서론 생성 중...");
@@ -407,7 +512,8 @@ export function TrafficPanel() {
         title,
         tocResult
       );
-
+      console.log("title", title);
+      console.log("tocResult", tocResult);
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
@@ -439,7 +545,9 @@ export function TrafficPanel() {
     }
   };
 
-  // ========== 통합 핸들러: 이미지 생성 ==========
+  // =========================================
+  // 통합 핸들러: 이미지 생성
+  // =========================================
   const handleGenerateImagePromptAndImages = async () => {
     try {
       updateLog("이미지 생성 시작...");
@@ -498,79 +606,69 @@ export function TrafficPanel() {
     }
   };
 
-  // ========== 최종 콘텐츠 렌더링(이미지 치환) ==========
-  /**
-   * [핵심 변경]
-   * 기존: const image = images[number - 1];
-   * 변경: const image = imagesById[number.toString()];
-   */
+  // =========================================
+  // 최종 콘텐츠 렌더링(이미지 치환)
+  // =========================================
   const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
-    const regex = /# ?\[(\d+)\]/g;
+    const regex = /#\[image\s*(\d+)\]/g;
     const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match;
+    const textStyle = { whiteSpace: "pre-wrap", display: "inline" };
 
-    // \n을 실제 줄바꿈
     const content = updatedContent.replace(/\\n/g, "\n");
+    let match;
+    let lastIndex = 0;
 
     while ((match = regex.exec(content)) !== null) {
+      const [placeholder, number] = match;
       const index = match.index;
-      const number = match[1]; // 문자열 그대로 두고 나중에 .toString() 없이 사용 가능
 
-      // 플레이스홀더 이전 텍스트
       if (lastIndex < index) {
-        const text = content.substring(lastIndex, index);
         parts.push(
-          <span
-            key={`text-${lastIndex}`}
-            style={{ whiteSpace: "pre-wrap", display: "inline" }}
-          >
-            {text}
+          <span key={`text-${lastIndex}`} style={textStyle}>
+            {content.substring(lastIndex, index)}
           </span>
         );
       }
 
-      // 이미지 매핑 (유연한 방식)
       const imageObj = imagesById[number];
-      if (imageObj) {
-        parts.push(
+      parts.push(
+        imageObj ? (
           <img
             key={`image-${number}`}
             src={imageObj.imageUrl}
             alt={`Image ${number}`}
             className="my-4 max-w-xs h-auto rounded-md object-contain"
           />
-        );
-      } else {
-        // 이미지가 없으면 그대로 표시
-        parts.push(
-          <span
-            key={`placeholder-${number}`}
-            style={{ whiteSpace: "pre-wrap", display: "inline" }}
-          >
-            {match[0]}
+        ) : (
+          <span key={`placeholder-${number}`} style={textStyle}>
+            {placeholder}
           </span>
-        );
-      }
+        )
+      );
+
       lastIndex = regex.lastIndex;
     }
 
-    // 마지막 남은 텍스트
     if (lastIndex < content.length) {
-      const text = content.substring(lastIndex);
       parts.push(
-        <span
-          key={`text-${lastIndex}`}
-          style={{ whiteSpace: "pre-wrap", display: "inline" }}
-        >
-          {text}
+        <span key={`text-${lastIndex}`} style={textStyle}>
+          {content.substring(lastIndex)}
         </span>
       );
     }
 
     return parts;
+  };
+
+  // =========================================
+  // 드롭다운 상태
+  // =========================================
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   // =========================
@@ -582,52 +680,7 @@ export function TrafficPanel() {
     <div>
       <ResizablePanelGroup direction="horizontal">
         {/* 사이드바 */}
-        <ResizablePanel
-          defaultSize={15}
-          minSize={10}
-          maxSize={15}
-          className=" p-2 overflow-y-auto"
-        >
-          <ul className="space-y-1">
-          <li>
-              <a
-                href="/keyword"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                키워드 ㅊㅊ
-              </a>
-            </li>
-            <li>
-              <a
-                href="/title"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                제목 ㅊㅊ
-              </a>
-            </li>
-            <li>
-              <a
-                href="/trafficcontent"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                정보성글 ㅊㅊ
-              </a>
-            </li>
-            <li>
-              <a
-                href="/feedback"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                피드백
-              </a>
-            </li>
-          </ul>
-        </ResizablePanel>
-
+        <SidePanel />
         <ResizableHandle />
 
         {/* 메인 영역 */}
@@ -681,7 +734,7 @@ export function TrafficPanel() {
             )}
           </div>
 
-          {/* 진행도 표시 (progress > 0 일 때만) */}
+          {/* 진행도 표시 */}
           {progress > 0 && (
             <div className="px-4">
               <ProgressBar progress={progress} message={progressMessage} />
@@ -689,22 +742,70 @@ export function TrafficPanel() {
           )}
 
           {/* 생성된 텍스트 / 이미지 미리보기 영역 */}
-          <div className="flex-1 bg-white rounded-md ">
-            {/* 
-              (1) 아직 updatedContent가 없으면 → intro,body,conclusion 표시
-                  + "복사하기" 버튼(본문 텍스트만)
-              (2) updatedContent가 있으면 → 최종 콘텐츠 렌더링 + "텍스트 +이미지 복사" 버튼
-            */}
-            {/* (1) intro/body/conclusion 표시 + 복사하기 버튼 */}
+          <div className="flex-1 bg-white rounded-md p-4">
+            {/* (1) updatedContent가 없을 때: intro/body/conclusion + "복사하기" 버튼 */}
             {!isUpdatedContentExist && isContentGenerated && (
               <div className="space-y-4">
                 <div className="space-y-2 text-sm">
                   <h3 className="font-bold mb-2 flex items-center">
                     📑 생성된 콘텐츠
-                    <div className="flex-1"></div>
-                    <Button className="ml-auto" onClick={handleCopyIntroBodyConclusion}>
+                    <div className="flex-1" />
+                    <Button
+                      className="ml-auto"
+                      onClick={handleCopyIntroBodyConclusion}
+                    >
                       📋 복사하기
                     </Button>
+                    {/* ▼ 추가: 다운로드 드롭다운 */}
+                    <div className="relative inline-block">
+                      <Button
+                        variant="outline"
+                        className="ml-2"
+                        onClick={toggleDropdown}
+                      >
+                        다운로드 ▼
+                      </Button>
+                      {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              // 여기서는 intro+body+conclusion 전체 저장을 할 지,
+                              // 아니면 updatedContent가 없는 상태에서는 텍스트 버튼 disable할 지 등
+                              // 상황에 맞게 원하는 로직으로 수정 가능
+                              // 지금은 updatedContent가 없으므로, combinedText 다운로드 예시
+                              const combinedText = [
+                                intro,
+                                body,
+                                conclusion,
+                              ]
+                                .filter((t) => t.trim().length > 0)
+                                .join("\n\n");
+                              if (!combinedText) {
+                                alert("⚠️ 저장할 내용이 없습니다.");
+                                return;
+                              }
+                              const blob = new Blob([combinedText], {
+                                type: "text/plain;charset=utf-8",
+                              });
+                              saveAs(blob, "content.txt");
+                            }}
+                          >
+                            텍스트(txt)
+                          </button>
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadImagesZip();
+                            }}
+                          >
+                            이미지(zip)
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </h3>
                 </div>
                 <div className="font-bold whitespace-pre-wrap break-words">
@@ -728,14 +829,44 @@ export function TrafficPanel() {
               </div>
             )}
 
-            {/* (2) 최종 콘텐츠 (updatedContent) 렌더링 + 텍스트+이미지 복사 버튼 */}
+            {/* (2) 최종 콘텐츠 (updatedContent) 렌더링 + "텍스트+이미지 복사" 버튼 */}
             {isUpdatedContentExist && (
               <div className="whitespace-pre-wrap break-words mt-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold">최종 콘텐츠:</span>
-                  <Button onClick={handleCopyUpdatedContentWithImages} className="ml-2">
-                    📋 복사하기
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={handleCopyUpdatedContentWithImages}>
+                      📋 복사하기
+                    </Button>
+                    {/* ▼ 추가: 다운로드 드롭다운 */}
+                    <div className="relative inline-block">
+                      <Button variant="outline" onClick={toggleDropdown}>
+                        다운로드 ▼
+                      </Button>
+                      {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadTxt();
+                            }}
+                          >
+                            텍스트(txt)
+                          </button>
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadImagesZip();
+                            }}
+                          >
+                            이미지(zip)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {renderUpdatedContent()}
               </div>
