@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { saveFeedback } from "../actions/others/saveFeedback";
+import { SidePanel } from "./side-panel";
 
 export function Feedback( ) {
  
@@ -23,41 +24,8 @@ const [feedback, setFeedback] = useState("");
   return (
     <div className="h-full">
     <ResizablePanelGroup direction="horizontal">
-    <ResizablePanel 
-      defaultSize={15}  // Increased from 20 to 25
-      minSize={10}      // Increased from 10 to 15
-      maxSize={15}
-      className="bg-gray-100 p-2 overflow-y-auto">
-      <ul className="space-y-1 ">
-        <li>
-        <a
-          href="/title"
-          className="block px-2 py-1 rounded-md hover:bg-gray-200  truncate"
-          style={{ backgroundColor: '#e5e7eb' }}
-        >
-          제목 ㅊㅊ
-        </a>
-        </li>
-        <li>
-              <a
-                href="/trafficcontent"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                정보성글 ㅊㅊ
-              </a>
-            </li>
-        <li>
-        <a
-          href="/feedback"
-          className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-          style={{ backgroundColor: '#e5e7eb' }}
-        >
-          피드백
-        </a>
-        </li>
-      </ul>
-    </ResizablePanel>
+        {/* 사이드바 */}
+        <SidePanel />
        {/* 메인 피드백 영역 */}
        <ResizablePanel className="p-4 flex flex-col h-full">
           <h2 className="text-lg font-semibold mb-2">피드백</h2>

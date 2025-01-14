@@ -27,6 +27,7 @@ import { generateImage } from "@/features/post-generation/actions/image/generate
 import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
 import { saveFeedback } from "../actions/others/saveFeedback";
+import { SidePanel } from "./side-panel";
 
 // 진행도 표시 컴포넌트 (기존 그대로)
 function ProgressBar({
@@ -129,6 +130,56 @@ export function TrafficPanel() {
     setIsContentGenerated(false);
   }
 
+
+  // =========================================
+// [추가] 후처리 함수
+// =========================================
+function postProcessUpdatedContent(rawContent: string): string {
+  let content = rawContent;
+
+  // -------------------------------------
+  // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
+  //    (이건 건드리지 않기 위함)
+  // -------------------------------------
+  const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
+  const correctPlaceholders: string[] = [];
+
+  // 임시 교체 (예: #[image3] => "@@@CORRECT_PLACEHOLDER@@@0"
+  content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
+    correctPlaceholders.push(match); // 실제 문자열 저장
+    return CORRECT_MARKER + (correctPlaceholders.length - 1);
+  });
+
+  // -------------------------------------
+  // 2) 잘못된 placeholder들만 교정
+  //    (#1, [2], [image3], #(4), # (5) 등)
+  //    ※ 일반 숫자(예: 2.0, 2024)는 "#", "[" 가 없으니 매칭 안 됨
+  // -------------------------------------
+  content = content.replace(
+    /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
+    (_, g1, g2, g3) => {
+      const imageNum = g1 || g2 || g3;
+      return `#[image${imageNum}]`;
+    }
+  );
+
+  // -------------------------------------
+  // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
+  // -------------------------------------
+  content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
+    return correctPlaceholders[parseInt(idx, 10)];
+  });
+
+  // -------------------------------------
+  // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
+  // -------------------------------------
+  content = content.replace(
+    /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
+    "$1"
+  );
+
+  return content;
+}
   // =========================================
   // 7) 복사 함수
   // =========================================
@@ -195,12 +246,12 @@ export function TrafficPanel() {
       alert("⚠️ 다운로드할 텍스트가 없습니다.");
       return;
     }
+
     try {
-      // Blob 생성 (text/plain)
+      // 이미 state에 저장된 updatedContent가 후처리된 상태이므로 그대로 사용
       const blob = new Blob([updatedContent], {
         type: "text/plain;charset=utf-8",
       });
-      // file-saver의 saveAs 사용
       saveAs(blob, "content.txt");
     } catch (error) {
       console.error("❌ TXT 다운로드 실패:", error);
@@ -377,13 +428,20 @@ export function TrafficPanel() {
   }> => {
     updateLog("이미지 프롬프트 생성 중...");
     const result = await generateImagePrompt(currentContent);
+    // ---------- [추가] 후처리 로직 적용 ----------
+    let processedContent = "";
     if (result.updatedContent) {
-      setUpdatedContent(result.updatedContent);
+      // 1) 후처리
+      processedContent = postProcessUpdatedContent(result.updatedContent);
+      // 2) state에 최종 정리된 content 저장
+      setUpdatedContent(processedContent);
     }
+
     setImagePrompts(result.imagePrompts);
     updateLog("이미지 프롬프트 생성 완료");
+
     return {
-      updatedContent: result.updatedContent || "",
+      updatedContent: processedContent || "",
       imagePrompts: result.imagePrompts,
     };
   };
@@ -554,65 +612,49 @@ export function TrafficPanel() {
   const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
-    const regex = /# ?\[(\d+)\]/g;
+    const regex = /#\[image\s*(\d+)\]/g;
     const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match;
+    const textStyle = { whiteSpace: "pre-wrap", display: "inline" };
 
-    // \n을 실제 줄바꿈
     const content = updatedContent.replace(/\\n/g, "\n");
+    let match;
+    let lastIndex = 0;
 
     while ((match = regex.exec(content)) !== null) {
+      const [placeholder, number] = match;
       const index = match.index;
-      const number = match[1]; // 문자열 그대로 사용
 
-      // 플레이스홀더 이전 텍스트
       if (lastIndex < index) {
-        const text = content.substring(lastIndex, index);
         parts.push(
-          <span
-            key={`text-${lastIndex}`}
-            style={{ whiteSpace: "pre-wrap", display: "inline" }}
-          >
-            {text}
+          <span key={`text-${lastIndex}`} style={textStyle}>
+            {content.substring(lastIndex, index)}
           </span>
         );
       }
 
-      // 이미지 매핑
       const imageObj = imagesById[number];
-      if (imageObj) {
-        parts.push(
+      parts.push(
+        imageObj ? (
           <img
             key={`image-${number}`}
             src={imageObj.imageUrl}
             alt={`Image ${number}`}
             className="my-4 max-w-xs h-auto rounded-md object-contain"
           />
-        );
-      } else {
-        // 이미지가 없으면 플레이스홀더 그대로
-        parts.push(
-          <span
-            key={`placeholder-${number}`}
-            style={{ whiteSpace: "pre-wrap", display: "inline" }}
-          >
-            {match[0]}
+        ) : (
+          <span key={`placeholder-${number}`} style={textStyle}>
+            {placeholder}
           </span>
-        );
-      }
+        )
+      );
+
       lastIndex = regex.lastIndex;
     }
 
-    // 마지막 남은 텍스트
     if (lastIndex < content.length) {
-      const text = content.substring(lastIndex);
       parts.push(
-        <span
-          key={`text-${lastIndex}`}
-          style={{ whiteSpace: "pre-wrap", display: "inline" }}
-        >
-          {text}
+        <span key={`text-${lastIndex}`} style={textStyle}>
+          {content.substring(lastIndex)}
         </span>
       );
     }
@@ -638,43 +680,7 @@ export function TrafficPanel() {
     <div>
       <ResizablePanelGroup direction="horizontal">
         {/* 사이드바 */}
-        <ResizablePanel
-          defaultSize={15}
-          minSize={10}
-          maxSize={15}
-          className="p-2 overflow-y-auto"
-        >
-          <ul className="space-y-1">
-            <li>
-              <a
-                href="/title"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                제목 ㅊㅊ
-              </a>
-            </li>
-            <li>
-              <a
-                href="/trafficcontent"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                정보성글 ㅊㅊ
-              </a>
-            </li>
-            <li>
-              <a
-                href="/feedback"
-                className="block px-2 py-1 rounded-md hover:bg-gray-200 truncate"
-                style={{ backgroundColor: "#e5e7eb" }}
-              >
-                피드백
-              </a>
-            </li>
-          </ul>
-        </ResizablePanel>
-
+        <SidePanel />
         <ResizableHandle />
 
         {/* 메인 영역 */}
