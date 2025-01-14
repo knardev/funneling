@@ -15,9 +15,11 @@ import {
   SmartBlockItem,
   SmartBlock,
   ScrapingResults,
+  TitleResult,
 } from "../types";
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
 import { SidePanel } from "./side-panel";
+import { saveTitleResult } from "../actions/others/save_titleResult";
 
 export function TitlePanel() {
   // Input states
@@ -41,8 +43,18 @@ export function TitlePanel() {
   const [serpdata, setSerpdata] = useState<SerpData>({ smartBlocks: [] });
   const [scrapingResults, setScrapingResults] = useState<ScrapingResults>([]);
 
+  const[titleResult, setTitleResult] = useState<TitleResult | null>(null);
   // 로딩
   const [isLoading, setIsLoading] = useState(false);
+
+
+    const handleSaveTitleResult = async (titleResult: TitleResult) => {
+      try {
+        await saveTitleResult(titleResult);
+      } catch (error) {
+        console.error("최종 결과 저장 오류:", error);
+      }
+    };
 
   // 스크래핑 + 제목 생성
   const handleScrapeAndGenerateTitle = async () => {
@@ -153,12 +165,26 @@ export function TitlePanel() {
         initResult.serviceanalysis
       );
 
+
+      const titleResult: TitleResult = {
+        ...generateResult.optimizedTitles,
+        keyword: mainkeyword
+      }
+
+      const TitleResultData = {
+        keyword: titleResult.keyword,
+        strict_structure: titleResult.strict_structure,
+        creative_structure: titleResult.creative_structure,
+        style_patterns: titleResult.style_patterns,
+      };
+
       setStrictTitles(generateResult.optimizedTitles.strict_structure || []);
       setCreativeTitles(generateResult.optimizedTitles.creative_structure || []);
       setStyleTitles(generateResult.optimizedTitles.style_patterns || []);
       setSubKeywords(generateResult.selected_subkeywords || []);
       setExtractedTitles(generateResult.extractedTitles || []);
 
+      handleSaveTitleResult(TitleResultData);
       setIsResultReady(true);
     } catch (error) {
       console.error("에러 발생:", error);
