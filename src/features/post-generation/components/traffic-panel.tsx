@@ -28,6 +28,7 @@ import { saveFinalResult } from "../actions/others/save_finalResult";
 import { Analysis, FinalResult } from "../types";
 import { saveFeedback } from "../actions/others/saveFeedback";
 import { SidePanel } from "./side-panel";
+import { set } from "date-fns";
 
 // 진행도 표시 컴포넌트 (기존 그대로)
 function ProgressBar({
@@ -464,6 +465,8 @@ export function TrafficPanel() {
       setProgress(10);
       setProgressMessage("컨텐츠 초기화 중...");
       const initResult = await handleInitializeContent();
+      setServiceAdvantages(initResult.serviceanalysis?.advantage_analysis || "");
+      setSubKeywordlist(initResult.subkeywordlist || []);
 
       setProgress(30);
       setProgressMessage("목차 생성 중...");
@@ -473,6 +476,7 @@ export function TrafficPanel() {
         tone,
         initResult.serviceanalysis
       );
+      setToc(tocResult);
 
       setProgress(50);
       setProgressMessage("서론 생성 중...");
@@ -483,6 +487,8 @@ export function TrafficPanel() {
         tone,
         initResult.serviceanalysis
       );
+      setIntro(introResult);
+
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
@@ -493,6 +499,7 @@ export function TrafficPanel() {
         tone,
         initResult.serviceanalysis
       );
+      setBody(bodyResult);
 
       setProgress(90);
       setProgressMessage("결론 생성 중...");
@@ -505,6 +512,7 @@ export function TrafficPanel() {
         tone,
         initResult.serviceanalysis
       );
+      setConclusion(conclusionResult);
 
       updateLog("✅ 콘텐츠 생성 완료!");
       setIsContentGenerated(true);
