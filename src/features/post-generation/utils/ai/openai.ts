@@ -44,7 +44,8 @@ export async function makeOpenAiRequest<T>(
     const response = await fetch(OPENAI_CONFIG.API.URL, {
       method: 'POST',
       headers: headers as Record<string, string>,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      cache: 'no-cache',
     });
 
     if (!response.ok) {
