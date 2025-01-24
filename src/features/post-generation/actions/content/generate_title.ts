@@ -59,14 +59,6 @@ async function processBlock(
     titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis),
     titlePrompt.system,
   );
-// usage 속성 출력
-if (response.usage) {
-  console.log("Prompt tokens:", response.usage.prompt_tokens);
-  console.log("Completion tokens:", response.usage.completion_tokens);
-  console.log("Total tokens:", response.usage.total_tokens);
-} else {
-  console.warn("Usage information is not available in the response.");
-}
 
   return {
     blockType: type,

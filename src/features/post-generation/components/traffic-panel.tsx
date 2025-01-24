@@ -361,44 +361,48 @@ export function TrafficPanel() {
   };
 
   const handleGenerateToc = async (
-    serviceanalysis: Analysis | null,
-    currentTitle: string,
+    mainkeyword: string,
+    title: string,
     tone: '정중체' | '음슴체',
+    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("목차 생성 중...");
-    const result = await generateToc(mainkeyword, currentTitle, tone);
+    const result = await generateToc(mainkeyword, title, tone, analysis || undefined);
     setToc(result.toc);
     updateLog("목차 생성 완료");
     return result.toc;
   };
 
   const handleGenerateIntro = async (
-    serviceanalysis: Analysis | null,
-    currentTitle: string,
-    currentToc: string,
+    mainkeyword: string,
+    title: string,
+    toc: string,
     tone: '정중체' | '음슴체',
+    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("서론 생성 중...");
-    const result = await generateIntro(mainkeyword, currentTitle, currentToc, tone);
+    const result = await generateIntro(mainkeyword, title, toc, tone, analysis || undefined);
     setIntro(result.intro);
     updateLog("서론 생성 완료");
     return result.intro;
   };
 
   const handleGenerateBody = async (
-    serviceanalysis: Analysis | null,
-    currentTitle: string,
-    currentToc: string,
-    currentIntro: string,
+    mainkeyword: string,
+    title: string,
+    toc: string,
+    intro: string,
     tone: '정중체' | '음슴체',
+    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("본론 생성 중...");
     const result = await generateBody(
       mainkeyword,
-      currentTitle,
-      currentToc,
-      currentIntro,
-      tone
+      title,
+      toc,
+      intro,
+      tone,
+      analysis || undefined
     );
     setBody(result.body);
     updateLog("본론 생성 완료");
@@ -406,21 +410,23 @@ export function TrafficPanel() {
   };
 
   const handleGenerateConclusion = async (
-    serviceanalysis: Analysis | null,
-    currentTitle: string,
-    currentToc: string,
-    currentIntro: string,
-    currentBody: string,
-    tone: string // 말투 인자 추가
+    mainkeyword: string,
+    title: string,
+    toc: string,
+    intro: string,
+    body: string,
+    tone: '정중체' | '음슴체',
+    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("결론 생성 중...");
     const result = await generateConclusion(
       mainkeyword,
-      currentTitle,
-      currentToc,
-      currentIntro,
-      currentBody,
-      tone
+      title,
+      toc,
+      intro,
+      body,
+      tone,
+      analysis || undefined
     );
     setConclusion(result.conclusion);
     updateLog("결론 생성 완료");
@@ -519,41 +525,45 @@ export function TrafficPanel() {
       setProgress(30);
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(
-        initResult.serviceanalysis,
+        mainkeyword,                // mainkeyword 전달
         title,
-        tone // 말투 전달
+        tone,                      // tone 전달
+        initResult.serviceanalysis // analysis 전달
       );
       console.log("title", title);
 
       setProgress(50);
       setProgressMessage("서론 생성 중...");
       const introResult = await handleGenerateIntro(
-        initResult.serviceanalysis,
+        mainkeyword,                // mainkeyword 전달
         title,
         tocResult,
-        tone // 말투 전달
+        tone,                      // tone 전달
+        initResult.serviceanalysis // analysis 전달
       );
       console.log("title", title);
       console.log("tocResult", tocResult);
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
-        initResult.serviceanalysis,
+        mainkeyword,                // mainkeyword 전달
         title,
         tocResult,
         introResult,
-        tone // 말투 전달
+        tone,                      // tone 전달
+        initResult.serviceanalysis // analysis 전달
       );
 
       setProgress(90);
       setProgressMessage("결론 생성 중...");
       const conclusionResult = await handleGenerateConclusion(
-        initResult.serviceanalysis,
+        mainkeyword,                // mainkeyword 전달
         title,
         tocResult,
         introResult,
         bodyResult,
-        tone // 말투 전달
+        tone,                      // tone 전달
+        initResult.serviceanalysis // analysis 전달
       );
 
       updateLog("✅ 콘텐츠 생성 완료!");
@@ -621,6 +631,7 @@ export function TrafficPanel() {
       setProgress(100);
       setProgressMessage("이미지 생성 완료!");
       updateLog("최종 결과 저장 완료");
+      setIsContentGenerated(false); // 이미지 생성 완료 후 다시 "컨텐츠 생성" 버튼으로 전환
     } catch (error) {
       updateLog(`❌ 이미지 생성 오류: ${error}`);
       console.error("이미지 생성 오류:", error);
@@ -817,14 +828,24 @@ export function TrafficPanel() {
                 )}
               </div>
 
-              {/* 컨텐츠 생성 버튼 */}
-              <Button
-                onClick={handleGenerateContent}
-                disabled={(progress > 0 && progress < 100) || !tone}
-                className="mt-0"
-              >
-                📝 컨텐츠 생성
-              </Button>
+              {/* 조건부 버튼: 컨텐츠 생성 또는 이미지 생성 */}
+              {!isContentGenerated ? (
+                <Button
+                  onClick={handleGenerateContent}
+                  disabled={(progress > 0 && progress < 100) || !tone}
+                  className="mt-0"
+                >
+                  📝 컨텐츠 생성
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleGenerateImagePromptAndImages}
+                  disabled={progress > 0 && progress < 100}
+                  className="mt-0"
+                >
+                  🖼️ 이미지 생성
+                </Button>
+              )}
             </div>
           </div>
 

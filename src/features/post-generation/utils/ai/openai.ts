@@ -5,7 +5,8 @@ const OPENAI_CONFIG = {
     URL: "https://api.openai.com/v1/chat/completions",
     KEY: process.env.OPENAI_API_KEY,
     MODEL: "gpt-4o",
-    MAX_TOKENS: 6000
+    MAX_TOKENS: 6000,
+    temperature: 0.7,
   }
 };
 
