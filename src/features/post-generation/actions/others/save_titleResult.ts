@@ -15,9 +15,9 @@ export async function saveTitleResult(
   TitleResult: TitleResult
 ) {
   const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
-  let strict_structure= TitleResult.strict_structure.join(",");
-  let creative_structure= TitleResult.creative_structure.join(",");
-  let style_patterns= TitleResult.style_patterns.join(",");
+  const strict_structure= TitleResult.strict_structure.join(",");
+  const creative_structure= TitleResult.creative_structure.join(",");
+  const style_patterns= TitleResult.style_patterns.join(",");
 
 
   try {

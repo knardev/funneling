@@ -56,6 +56,7 @@ async function processBlock(
   );
   console.log("response:", response);
   console.log("selected_subkeywords:", response.selected_subkeywords);
+
   return {
     blockType: type,
     strictTitle: response.optimized_titles.strict_structure,
@@ -155,6 +156,7 @@ export async function generateTitle(
       await wait(RETRY_DELAY);
     }
   }
+
 
   return {
     selected_subkeywords: [],
