@@ -1,17 +1,13 @@
 "use server";
 
-import { TitleResponse,ImportanceTitles, Analysis, ScrapingResults } from "../../types";
-import { makeOpenAiRequest, } from "../../utils/ai/openai";
-import{ makeClaudeRequest } from "../../utils/ai/claude"; 
+import { TitleResponse, Analysis, ScrapingResults } from "../../types";
+import { makeOpenAiRequest } from "../../utils/ai/openai";
 import { titlePrompt } from "../../prompts/contentPrompt/titlePrompt";
-import { title } from "process";
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-
-
 /**
- * 개별 블록을 OpenAI에 전달하여 제목을 생성
+ * 단일 블록을 OpenAI에 전달하여 제목을 생성
  */
 async function processBlock(
   block: { type: string; scrapedtitle: { rank: number; postTitle: string }[] },
@@ -20,7 +16,6 @@ async function processBlock(
   analysis?: Analysis
 ) {
   const { type, scrapedtitle } = block;
-
   console.log(`"${type}" 블록 처리 중...`);
 
   const scrapedtitles = scrapedtitle.map(item => item.postTitle);
@@ -49,12 +44,12 @@ async function processBlock(
       strict_structure: string;
       creative_structure: string;
       style_patterns: string;
-    };  usage?: {
+    };
+    usage?: {
       prompt_tokens: number;
       completion_tokens: number;
       total_tokens: number;
     };
-
   }>(
     titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis),
     titlePrompt.system,
@@ -65,7 +60,7 @@ async function processBlock(
     strictTitle: response.optimized_titles.strict_structure,
     creativeTitle: response.optimized_titles.creative_structure,
     styleTitle: response.optimized_titles.style_patterns,
-    block_subkeywords: response.selected_subkeywords
+    block_subkeywords: response.selected_subkeywords,
   };
 }
 
@@ -90,46 +85,57 @@ export async function generateTitle(
       const mainkeyword = keyword;
       const subkeywords = subkeywordlist || [];
       const selected_subkeywords: string[] = [];
-
       const extractedTitles: string[] = [];
       const strictTitles: string[] = [];
       const creativeTitles: string[] = [];
       const styleTitles: string[] = [];
 
-
-
       if (scrapingResults.length === 1) {
-        // ✅ scrapingResults에 블록이 하나일 경우
-        console.log("단일 블록 감지됨: 3번 반복 처리");
+        // ✅ scrapingResults에 블록이 하나면, 같은 블록을 3번 병렬 요청
+        console.log("단일 블록 감지됨: 3번 병렬 처리");
 
-        for (let i = 0; i < 3; i++) {
-          const block = scrapingResults[0]; // 첫 번째 블록을 3번 반복 처리
+        const singleBlock = scrapingResults[0];
 
-          const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
+        // 3번 병렬 호출
+        const promises = Array.from({ length: 3 }, () => 
+          processBlock(singleBlock, mainkeyword, subkeywords, analysis)
+        );
+        const results = await Promise.all(promises);
 
-          extractedTitles.push(...block.scrapedtitle.map(item => item.postTitle));
+        // 결과 합치기
+        for (const blockResult of results) {
+          extractedTitles.push(
+            ...singleBlock.scrapedtitle.map(item => item.postTitle),
+          );
           strictTitles.push(blockResult.strictTitle);
           creativeTitles.push(blockResult.creativeTitle);
           styleTitles.push(blockResult.styleTitle);
           selected_subkeywords.push(...blockResult.block_subkeywords);
         }
+
       } else {
-        // ✅ scrapingResults에 블록이 여러 개일 경우
-        console.log("다중 블록 감지됨: 일반 처리");
+        // ✅ scrapingResults에 블록이 여러 개라면, 각 블록을 병렬 처리
+        console.log("다중 블록 감지됨: 블록별 병렬 처리");
 
-        for (const block of scrapingResults) {
-          const blockResult = await processBlock(block, mainkeyword, subkeywords, analysis);
+        const promises = scrapingResults.map(block => 
+          processBlock(block, mainkeyword, subkeywords, analysis)
+        );
+        const results = await Promise.all(promises);
 
+        // 결과 합치기
+        results.forEach((blockResult, idx) => {
+          const block = scrapingResults[idx];
           extractedTitles.push(...block.scrapedtitle.map(item => item.postTitle));
           strictTitles.push(blockResult.strictTitle);
           creativeTitles.push(blockResult.creativeTitle);
           styleTitles.push(blockResult.styleTitle);
           selected_subkeywords.push(...blockResult.block_subkeywords);
-        }
+        });
       }
 
       console.log("subkeywords:", selected_subkeywords);
 
+      // 최종 반환
       return {
         selected_subkeywords: Array.from(new Set(selected_subkeywords)), // 중복 제거
         optimizedTitles: {
@@ -160,7 +166,7 @@ export async function generateTitle(
     }
   }
 
-
+  // 재시도 후에도 실패 시 기본 구조 반환
   return {
     selected_subkeywords: [],
     optimizedTitles: {
@@ -172,42 +178,29 @@ export async function generateTitle(
   };
 }
 
-
-
+/**
+ * 추가: 필요한 경우 최빈 키워드 추출 로직 (기존 그대로)
+ */
 function extractTopKeywords(titles: string[]): string[] {
-  if (!titles || !titles.length) {
-    return [];
-  }
+  if (!titles || !titles.length) return [];
 
-  // 불용어 목록
   const stopWords = new Set([
-    // 일반적인 조사/접속사
-    '및', '의', '후', '이', '그', '저', '것', '수', 
-    '을', '를', '이', '가', '과', '와', '는', '에', '께',
-    // 일반적인 동사/형용사
-    '있다', '없다', '하다', '되다', '이다',
-    // 특수문자와 숫자
+    "및","의","후","이","그","저","것","수",
+    "을","를","이","가","과","와","는","에","께",
+    "있다","없다","하다","되다","이다",
     ...'1234567890!@#$%^&*()'.split(''),
-    // 일반적인 접두어/접미어
-    '재', '적', '성', '화', '들'
+    "재","적","성","화","들"
   ]);
 
-  const cleanText = (text: string): string => {
+  const cleanText = (text: string) => {
     return text
-      // HTML 태그 제거
-      .replace(/<[^>]*>/g, '')
-      // 이모지 및 특수 문자 제거 (수정된 부분)
-      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]|[\uE000-\uF8FF]/g, '')
-      // 중괄호로 둘러싸인 내용 제거
-      .replace(/\{.*?\}/g, '')
-      // 대괄호로 둘러싸인 내용 제거
-      .replace(/\[.*?\]/g, '')
-      // URL 제거
-      .replace(/https?:\/\/\S+/g, '')
-      // 특수문자를 공백으로 변경
-      .replace(/[^\w\s가-힣]/g, ' ')
-      // 연속된 공백을 하나로 축소
-      .replace(/\s+/g, ' ')
+      .replace(/<[^>]*>/g, "")
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]|[\uE000-\uF8FF]/g, "")
+      .replace(/\{.*?\}/g, "")
+      .replace(/\[.*?\]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[^\w\s가-힣]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   };
 
@@ -215,26 +208,20 @@ function extractTopKeywords(titles: string[]): string[] {
   const processedTitles = titles.map(cleanText);
 
   processedTitles.forEach(title => {
-    // 한글, 영문자로 구성된 단어 추출
     const words = title.match(/[\w가-힣]+/g) || [];
-    
     words.forEach(word => {
-      // 단어 정제 조건
       if (
-        word &&
-        word.length >= 2 && // 2글자 이상
-        !stopWords.has(word) && // 불용어 제외
-        !/^\d+$/.test(word) && // 숫자로만 이루어진 문자열 제외
-        !(/^[a-zA-Z]{1,2}$/.test(word)) // 1-2글자 영문자 제외
+        word.length >= 2 &&
+        !stopWords.has(word) &&
+        !/^\d+$/.test(word) &&
+        !/^[a-zA-Z]{1,2}$/.test(word)
       ) {
-        // 대소문자 구분 없이 처리
         const normalizedWord = word.toLowerCase();
         wordCounts[normalizedWord] = (wordCounts[normalizedWord] || 0) + 1;
       }
     });
   });
 
-  // 빈도수 기준으로 상위 5개 키워드 추출
   return Object.entries(wordCounts)
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 5)
