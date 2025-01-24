@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import React from "react";
 import {
   ResizableHandle,
@@ -68,6 +68,13 @@ export function TrafficPanel() {
   const [serviceType, setServiceType] = useState("");
   const [serviceAdvantages, setServiceAdvantages] = useState("");
 
+  // [추가] 말투 상태
+  const [tone, setTone] = useState<'정중체' | '음슴체'>("음슴체");
+
+  // [추가] 말투 드롭다운 상태
+  const [isToneDropdownOpen, setIsToneDropdownOpen] = useState(false);
+  const toneDropdownRef = useRef<HTMLDivElement>(null);
+
   // ===================
   // 2) 결과 상태
   // ===================
@@ -128,58 +135,59 @@ export function TrafficPanel() {
     setProgress(0);
     setProgressMessage("");
     setIsContentGenerated(false);
+    setTone("음슴체"); // 말투 초기화
   }
 
-
   // =========================================
-// [추가] 후처리 함수
-// =========================================
-function postProcessUpdatedContent(rawContent: string): string {
-  let content = rawContent;
+  // [추가] 후처리 함수
+  // =========================================
+  function postProcessUpdatedContent(rawContent: string): string {
+    let content = rawContent;
 
-  // -------------------------------------
-  // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
-  //    (이건 건드리지 않기 위함)
-  // -------------------------------------
-  const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
-  const correctPlaceholders: string[] = [];
+    // -------------------------------------
+    // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
+    //    (이건 건드리지 않기 위함)
+    // -------------------------------------
+    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
+    const correctPlaceholders: string[] = [];
 
-  // 임시 교체 (예: #[image3] => "@@@CORRECT_PLACEHOLDER@@@0"
-  content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
-    correctPlaceholders.push(match); // 실제 문자열 저장
-    return CORRECT_MARKER + (correctPlaceholders.length - 1);
-  });
+    // 임시 교체 (예: #[image3] => "@@@CORRECT_PLACEHOLDER@@@0"
+    content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
+      correctPlaceholders.push(match); // 실제 문자열 저장
+      return CORRECT_MARKER + (correctPlaceholders.length - 1);
+    });
 
-  // -------------------------------------
-  // 2) 잘못된 placeholder들만 교정
-  //    (#1, [2], [image3], #(4), # (5) 등)
-  //    ※ 일반 숫자(예: 2.0, 2024)는 "#", "[" 가 없으니 매칭 안 됨
-  // -------------------------------------
-  content = content.replace(
-    /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
-    (_, g1, g2, g3) => {
-      const imageNum = g1 || g2 || g3;
-      return `#[image${imageNum}]`;
-    }
-  );
+    // -------------------------------------
+    // 2) 잘못된 placeholder들만 교정
+    //    (#1, [2], [image3], #(4), # (5) 등)
+    //    ※ 일반 숫자(예: 2.0, 2024)는 "#", "[" 가 없으니 매칭 안 됨
+    // -------------------------------------
+    content = content.replace(
+      /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
+      (_, g1, g2, g3) => {
+        const imageNum = g1 || g2 || g3;
+        return `#[image${imageNum}]`;
+      }
+    );
 
-  // -------------------------------------
-  // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
-  // -------------------------------------
-  content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
-    return correctPlaceholders[parseInt(idx, 10)];
-  });
+    // -------------------------------------
+    // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
+    // -------------------------------------
+    content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
+      return correctPlaceholders[parseInt(idx, 10)];
+    });
 
-  // -------------------------------------
-  // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
-  // -------------------------------------
-  content = content.replace(
-    /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
-    "$1"
-  );
+    // -------------------------------------
+    // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
+    // -------------------------------------
+    content = content.replace(
+      /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
+      "$1"
+    );
 
-  return content;
-}
+    return content;
+  }
+
   // =========================================
   // 7) 복사 함수
   // =========================================
@@ -354,10 +362,11 @@ function postProcessUpdatedContent(rawContent: string): string {
 
   const handleGenerateToc = async (
     serviceanalysis: Analysis | null,
-    currentTitle: string
+    currentTitle: string,
+    tone: '정중체' | '음슴체',
   ): Promise<string> => {
     updateLog("목차 생성 중...");
-    const result = await generateToc(mainkeyword, currentTitle);
+    const result = await generateToc(mainkeyword, currentTitle, tone);
     setToc(result.toc);
     updateLog("목차 생성 완료");
     return result.toc;
@@ -366,10 +375,11 @@ function postProcessUpdatedContent(rawContent: string): string {
   const handleGenerateIntro = async (
     serviceanalysis: Analysis | null,
     currentTitle: string,
-    currentToc: string
+    currentToc: string,
+    tone: '정중체' | '음슴체',
   ): Promise<string> => {
     updateLog("서론 생성 중...");
-    const result = await generateIntro(mainkeyword, currentTitle, currentToc);
+    const result = await generateIntro(mainkeyword, currentTitle, currentToc, tone);
     setIntro(result.intro);
     updateLog("서론 생성 완료");
     return result.intro;
@@ -379,14 +389,16 @@ function postProcessUpdatedContent(rawContent: string): string {
     serviceanalysis: Analysis | null,
     currentTitle: string,
     currentToc: string,
-    currentIntro: string
+    currentIntro: string,
+    tone: '정중체' | '음슴체',
   ): Promise<string> => {
     updateLog("본론 생성 중...");
     const result = await generateBody(
       mainkeyword,
       currentTitle,
       currentToc,
-      currentIntro
+      currentIntro,
+      tone
     );
     setBody(result.body);
     updateLog("본론 생성 완료");
@@ -398,7 +410,8 @@ function postProcessUpdatedContent(rawContent: string): string {
     currentTitle: string,
     currentToc: string,
     currentIntro: string,
-    currentBody: string
+    currentBody: string,
+    tone: string // 말투 인자 추가
   ): Promise<string> => {
     updateLog("결론 생성 중...");
     const result = await generateConclusion(
@@ -406,7 +419,8 @@ function postProcessUpdatedContent(rawContent: string): string {
       currentTitle,
       currentToc,
       currentIntro,
-      currentBody
+      currentBody,
+      tone
     );
     setConclusion(result.conclusion);
     updateLog("결론 생성 완료");
@@ -488,6 +502,11 @@ function postProcessUpdatedContent(rawContent: string): string {
   // 통합 핸들러: 컨텐츠 생성
   // =========================================
   const handleGenerateContent = async () => {
+    if (!tone) {
+      alert("⚠️ 말투를 선택해주세요.");
+      return;
+    }
+
     if (updatedContent) {
       resetAllStates();
     }
@@ -501,7 +520,8 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(
         initResult.serviceanalysis,
-        title
+        title,
+        tone // 말투 전달
       );
       console.log("title", title);
 
@@ -510,7 +530,8 @@ function postProcessUpdatedContent(rawContent: string): string {
       const introResult = await handleGenerateIntro(
         initResult.serviceanalysis,
         title,
-        tocResult
+        tocResult,
+        tone // 말투 전달
       );
       console.log("title", title);
       console.log("tocResult", tocResult);
@@ -520,7 +541,8 @@ function postProcessUpdatedContent(rawContent: string): string {
         initResult.serviceanalysis,
         title,
         tocResult,
-        introResult
+        introResult,
+        tone // 말투 전달
       );
 
       setProgress(90);
@@ -530,7 +552,8 @@ function postProcessUpdatedContent(rawContent: string): string {
         title,
         tocResult,
         introResult,
-        bodyResult
+        bodyResult,
+        tone // 말투 전달
       );
 
       updateLog("✅ 콘텐츠 생성 완료!");
@@ -663,13 +686,43 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   // =========================================
-  // 드롭다운 상태
+  // 드롭다운 상태 (다운로드와 말투 드롭다운 각각 관리)
   // =========================================
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
+  const downloadDropdownRef = useRef<HTMLDivElement>(null);
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const toggleDownloadDropdown = () => {
+    setIsDownloadDropdownOpen(!isDownloadDropdownOpen);
   };
+
+  const toggleToneDropdown = () => {
+    setIsToneDropdownOpen(!isToneDropdownOpen);
+  };
+
+  // =========================================
+  // 드롭다운 외부 클릭 시 닫기
+  // =========================================
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        toneDropdownRef.current &&
+        !toneDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsToneDropdownOpen(false);
+      }
+      if (
+        downloadDropdownRef.current &&
+        !downloadDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDownloadDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // =========================
   // 최종 렌더
@@ -690,48 +743,89 @@ function postProcessUpdatedContent(rawContent: string): string {
           className="p-4 flex flex-col gap-4 overflow-hidden"
         >
           {/* 입력 필드 */}
-          <div className="flex gap-4 p-4 items-center rounded-md shadow bg-white">
-            <div className="flex-2">
-              <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
-              <Input
-                placeholder="키워드를 입력하세요"
-                value={mainkeyword}
-                onChange={(e) => setMainKeyword(e.target.value)}
-                className="w-52"
-              />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold mb-2">제목 입력</h2>
-              <Input
-                placeholder="제목을 입력하세요"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full"
-              />
+          <div className="flex flex-col gap-4 p-4 rounded-md shadow bg-white">
+            {/* 키워드 및 제목 입력 */}
+            <div className="flex gap-4">
+              <div className="flex-2">
+                <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+                <Input
+                  placeholder="키워드를 입력하세요"
+                  value={mainkeyword}
+                  onChange={(e) => setMainKeyword(e.target.value)}
+                  className="w-52"
+                />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold mb-2">제목 입력</h2>
+                <Input
+                  placeholder="제목을 입력하세요"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full"
+                />
+              </div>
             </div>
 
-            {/* 
-              버튼 표시 로직:
-              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재하면 → "컨텐츠 생성"
-              - 그 외(컨텐츠만 생성된 상태, 이미지 아직 생성 안된 상태) → "이미지 생성"
-            */}
-            {!isContentGenerated || isUpdatedContentExist ? (
+            {/* 말투 선택 드롭다운과 버튼 */}
+            <div className="flex items-end gap-4">
+              {/* 말투 선택 드롭다운 (크기 조정) */}
+              <div className="w-32 relative" ref={toneDropdownRef}>
+                <Button
+                  variant="outline"
+                  onClick={toggleToneDropdown}
+                  className="w-full flex justify-between items-center"
+                >
+                  {tone ? tone : "말투 선택"}
+                  <svg
+                    className={`w-4 h-4 ml-2 transition-transform duration-200 ${
+                      isToneDropdownOpen ? "transform rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </Button>
+                {isToneDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-20">
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setTone("음슴체");
+                        setIsToneDropdownOpen(false);
+                      }}
+                    >
+                      음슴체
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      onClick={() => {
+                        setTone("정중체");
+                        setIsToneDropdownOpen(false);
+                      }}
+                    >
+                      정중체
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 컨텐츠 생성 버튼 */}
               <Button
                 onClick={handleGenerateContent}
-                disabled={progress > 0 && progress < 100}
-                className="mt-auto justify-end"
+                disabled={(progress > 0 && progress < 100) || !tone}
+                className="mt-0"
               >
                 📝 컨텐츠 생성
               </Button>
-            ) : (
-              <Button
-                onClick={handleGenerateImagePromptAndImages}
-                disabled={progress > 0 && progress < 100}
-                className="mt-auto justify-end"
-              >
-                이미지 생성
-              </Button>
-            )}
+            </div>
           </div>
 
           {/* 진행도 표시 */}
@@ -757,24 +851,21 @@ function postProcessUpdatedContent(rawContent: string): string {
                       📋 복사하기
                     </Button>
                     {/* ▼ 추가: 다운로드 드롭다운 */}
-                    <div className="relative inline-block">
+                    <div className="relative inline-block ml-2" ref={downloadDropdownRef}>
                       <Button
                         variant="outline"
-                        className="ml-2"
-                        onClick={toggleDropdown}
+                        onClick={toggleDownloadDropdown}
+                        className="flex items-center"
                       >
                         다운로드 ▼
                       </Button>
-                      {isDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                      {isDownloadDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-20">
                           <button
-                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             onClick={() => {
-                              toggleDropdown();
-                              // 여기서는 intro+body+conclusion 전체 저장을 할 지,
-                              // 아니면 updatedContent가 없는 상태에서는 텍스트 버튼 disable할 지 등
-                              // 상황에 맞게 원하는 로직으로 수정 가능
-                              // 지금은 updatedContent가 없으므로, combinedText 다운로드 예시
+                              toggleDownloadDropdown();
+                              // 텍스트 다운로드
                               const combinedText = [
                                 intro,
                                 body,
@@ -795,9 +886,9 @@ function postProcessUpdatedContent(rawContent: string): string {
                             텍스트(txt)
                           </button>
                           <button
-                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             onClick={() => {
-                              toggleDropdown();
+                              toggleDownloadDropdown();
                               handleDownloadImagesZip();
                             }}
                           >
@@ -839,25 +930,29 @@ function postProcessUpdatedContent(rawContent: string): string {
                       📋 복사하기
                     </Button>
                     {/* ▼ 추가: 다운로드 드롭다운 */}
-                    <div className="relative inline-block">
-                      <Button variant="outline" onClick={toggleDropdown}>
+                    <div className="relative inline-block" ref={downloadDropdownRef}>
+                      <Button
+                        variant="outline"
+                        onClick={toggleDownloadDropdown}
+                        className="flex items-center"
+                      >
                         다운로드 ▼
                       </Button>
-                      {isDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                      {isDownloadDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-20">
                           <button
-                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             onClick={() => {
-                              toggleDropdown();
+                              toggleDownloadDropdown();
                               handleDownloadTxt();
                             }}
                           >
                             텍스트(txt)
                           </button>
                           <button
-                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             onClick={() => {
-                              toggleDropdown();
+                              toggleDownloadDropdown();
                               handleDownloadImagesZip();
                             }}
                           >

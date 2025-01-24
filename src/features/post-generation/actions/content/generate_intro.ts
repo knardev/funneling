@@ -8,6 +8,7 @@ export async function generateIntro(
   mainkeyword: string,
   title: string,
   toc: string,
+  tone: "정중체" | "음슴체",
   analysis?: Analysis
 ) {
   // introPrompt.generatePrompt의 실행 결과 저장
@@ -15,22 +16,30 @@ export async function generateIntro(
     mainkeyword,
     title,
     toc,
+    tone,
     analysis
   );
 
+  if (!tone) {
+    throw new Error("Tone is required.");
+  }
+  try{
+    const { system, prompt } = generatedPrompt;
+    const response = await makeClaudeRequest<{
+      optimized_intro: string;
+    }>(
+      prompt,
+      system
+    );
+    console.log("generateIntro 응답 데이터", JSON.stringify(response));
+    const intro = response.optimized_intro;
 
-  const response = await makeClaudeRequest<{
-    optimized_intro: string;
-  }>(
-    generatedPrompt, // 여기서 사용
-    introPrompt.system
-  );
-
-  console.log("generateIntro 응답 데이터", JSON.stringify(response));
-
-  const intro = response.optimized_intro;
-
-  return {
-    intro: intro,
-  };
+    return {
+      intro: intro,
+    };
+  }
+  catch (error) {
+    console.error("generateIntro 오류:", error);
+    throw error;
+  }
 }

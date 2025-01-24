@@ -49,13 +49,24 @@ async function processBlock(
       strict_structure: string;
       creative_structure: string;
       style_patterns: string;
+    };  usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
     };
+
   }>(
     titlePrompt.generatePrompt(mainKeyword, scrapedtitles, subkeywords, analysis),
     titlePrompt.system,
   );
-  console.log("response:", response);
-  console.log("selected_subkeywords:", response.selected_subkeywords);
+// usage 속성 출력
+if (response.usage) {
+  console.log("Prompt tokens:", response.usage.prompt_tokens);
+  console.log("Completion tokens:", response.usage.completion_tokens);
+  console.log("Total tokens:", response.usage.total_tokens);
+} else {
+  console.warn("Usage information is not available in the response.");
+}
 
   return {
     blockType: type,

@@ -8,6 +8,7 @@ export async function generateBody(
   title: string,
   toc:string,
   intro:string,
+  tone: string,
   analysis?: Analysis) {
     
 

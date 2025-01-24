@@ -1,35 +1,20 @@
 import { Analysis } from "../../types";
 
 export const introPrompt = {
-    system: `
-    You are a professional Blogger in Korea who writes in '음슴체' style. Every sentence should be short, easy, and specific.
-    Use these ending variations for 음슴체:
+    systems: {
+      정중체: `You are a professional Blogger in Korea who writes in '정중체' style. Every sentence should be polite, formal, and respectful.
+      
+      `,
+      음슴체: ` 
+      
+      Use these ending variations for 음슴체:
     - "~임"
     - "~슴"
     - "~는데"
     - "~맞음"
     - "~가봄"
 
-    **Prefill JSON Response**
-    {
-      "analysis_results": {
-        "titleAnalysis": {
-          "message": "",
-          "reasonsForClick": [],
-          "why": []
-        },
-        "tocAnalysis": {
-          "message": "",
-          "keyTopics": [],
-          "contentFlow": "",
-          "uniqueValue": ""
-        },
-        "yesSetQuestions": []
-      },
-      "optimized_intro": ""
-    }
-
-    Here's the blog style for Naver Blog in 음슴체:
+      Here's the blog style for Naver Blog in 음슴체:
 
     # 네이버 블로그 음슴체 특징
         
@@ -88,9 +73,105 @@ export const introPrompt = {
         "이거 찐임"
         "개마려움"
         "찐맛집임"
-        "갓생 사는중임"`,
+        "갓생 사는중임"
+  
+  
+  **Prefill JSON Response**
+    {
+      "analysis_results": {
+        "titleAnalysis": {
+          "message": "",
+          "reasonsForClick": [],
+          "why": []
+        },
+        "tocAnalysis": {
+          "message": "",
+          "keyTopics": [],
+          "contentFlow": "",
+          "uniqueValue": ""
+        },
+        "yesSetQuestions": []
+      },
+      "optimized_intro": ""
+    }`,
+    },
 
-    template: `
+    templates: {
+      정중체: `
+          
+    \n\nHuman:
+    다음 제목과 목차를 분석하고, YES-SET 기법을 사용하여 독자의 관심을 끌 수 있는 서론을 작성해줘. 
+    분석 내용은 내부적으로 처리하고, 최종적으로 생성된 서론 1개만 출력하는거야. 서론은 독자의 니즈를 반영하고, 정중체로 매력적으로 작성되어야 해. 
+    
+      1. 메인 키워드: "{mainKeyword}"
+      2. 제목: "{title}"
+      3. 목차: "{toc}"
+      4. 서비스분석: "{serviceAnalysis}"
+    
+    ### 작성 단계임
+    
+    1. **제목과 목차 분석**
+       - 제목이 전달하는 메시지를 핵심적으로 단순화해서 분석하기
+       - 목차를 분석해서 콘텐츠의 전체적인 흐름과 가치 파악하기
+       - 독자가 얻을 수 있는 핵심 가치와 인사이트 도출하기
+       - 제목+목차가 왜 독자의 관심을 끌었는지 분석하기
+       - 클릭한 독자의 주요 궁금증이나 니즈 2-3개 뽑아내기
+       - 감정적 연결과 신뢰성 확보가 되었는지 체크하기
+    
+    2. **YES-SET 구성**
+       - 독자가 제목과 목차 내용에 "응" 하고 답할 수 있는 질문 2-3개 만들기
+       - 질문은 독자의 니즈랑 감정적 연결을 반영해야 함
+       - 정중체로 다양한 표현과 스타일 사용하기
+         예시: "이런 경험 있으시죠?", "이거 나만 그런거 아니죠?", "같이 보러 가실 분 있으신가요?"
+    
+    3. **서론 작성 가이드**
+       - YES-SET 질문을 활용해서 서론 작성하기
+       - 음슴체로 통일감 있게 작성하기
+       
+       - 서론은 이런 방식 중에 하나로 다양하게 쓰기:
+         - **상황 묘사:** "여러분도 이런 적 있으신가요? {구체적인 상황}"
+         - **직접 정보:** "이거 진짜 꿀팁인데 알려드릴게요"
+         - **의문 제기:** "이런 고민 있으신가요?"
+         - **감정적 연결:** "솔직히 이거 혼자만 그런거 아니죠?"
+         - **전문가형:** "전문가가 알려주는 진짜 팁이에요"
+         - **유머러스:** "이거 보고 놀라지 마세요ㅋㅋㅋ"
+         - **스토리텔링:** "그날이었어요. 대박 발견한..."
+    
+    4. **서론 작성 조건**
+       - 모든 문장은 문장부호로 끝나야 함
+       - 흥미를 확 끌수 있게 쓰기
+       - 공감되는 내용 꼭 넣기
+       - 줄바꿈으로 가독성 높이기
+       - 구체적이고 생생한 표현 쓰기
+       - 다양한 정중체 변형 활용하기 (예: ~입니다, ~하시죠)
+       - 목차 분석 내용을 자연스럽게 녹여서 방향성 제시하기
+       - 서비스 분석의 핵심 장점이나 차별점도 넣기
+       
+    5. **서론 생성 규칙**
+        - 서론은 600~700자 이내로만 쓰기
+        - 줄바꿈이나 탭은 \\n으로 처리하기
+        - JSON 구조로만 출력하기. 다른 건 절대 쓰면 안 됩니다.
+    \n\nAssistant:
+    {
+      "analysis_results": {
+        "titleAnalysis": {
+          "message": "{제목 분석 내용}",
+          "reasonsForClick": ["{이유1}", "{이유2}", "{이유3}"],
+          "why": ["{키워드1}", "{키워드2}", "{키워드3}"]
+        },
+        "tocAnalysis": {
+          "message": "{목차 분석 내용}",
+          "keyTopics": ["{주제1}", "{주제2}", "{주제3}"],
+          "contentFlow": "{콘텐츠 흐름}",
+          "uniqueValue": "{차별화된 가치}"
+        },
+        "yesSetQuestions": ["{질문1}", "{질문2}", "{질문3}"]
+      },
+      "optimized_intro": "{서론 내용}"
+  } 
+      `,
+      음슴체: `
+    
     \n\nHuman:
     다음 제목과 목차를 분석하고, YES-SET 기법을 사용하여 독자의 관심을 끌 수 있는 서론을 작성해줘. 
     분석 내용은 내부적으로 처리하고, 최종적으로 생성된 서론 1개만 출력하는거임. 서론은 독자의 니즈를 반영하고, 음슴체로 매력적으로 작성되어야 함.
@@ -160,19 +241,28 @@ export const introPrompt = {
         "yesSetQuestions": ["{질문1임}", "{질문2임}", "{질문3임}"]
       },
       "optimized_intro": "{서론 내용임}"
-    }
-    `,
-
+  }`
+    },
     generatePrompt: (
       mainKeyword: string,
       title: string,
       toc: string,
+      tone: `정중체` | `음슴체`,
       analysis?: Analysis
-    ): string => {
-      return introPrompt.template
+    ): { system: string; prompt: string }  => {
+      const system=introPrompt.systems[tone];
+      if (!system) {
+        throw new Error("Tone is required.");
+      }
+      const template = introPrompt.templates[tone];
+      if (!template) {
+        throw new Error("Template is required.");
+      }
+      const prompt = template
         .replace("{mainKeyword}", mainKeyword)
         .replace("{title}", title)
         .replace("{toc}", toc)
         .replace("{serviceAnalysis}", analysis ? JSON.stringify(analysis) : '');
-    }
+    return { system, prompt };
+      }
 };

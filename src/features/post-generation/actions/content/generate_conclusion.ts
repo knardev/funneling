@@ -10,6 +10,7 @@ export async function generateConclusion(
     toc: string,
     intro: string,
     body: string,
+    tone: string,
     analysis?: Analysis
 ) {
 
