@@ -69,7 +69,7 @@ export function TrafficPanel() {
   const [serviceAdvantages, setServiceAdvantages] = useState("");
 
   // [추가] 말투 상태
-  const [tone, setTone] = useState<'정중체' | '음슴체'>("음슴체");
+  const [tone, setTone] = useState<"정중체" | "음슴체">("음슴체");
 
   // [추가] 말투 드롭다운 상태
   const [isToneDropdownOpen, setIsToneDropdownOpen] = useState(false);
@@ -84,21 +84,22 @@ export function TrafficPanel() {
     target_needs: null,
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
+
+  // (1) intro, body, conclusion을 빈 문자열로 초기화
   const [title, setTitle] = useState("");
   const [toc, setToc] = useState("");
-  const [intro, setIntro] = useState("");
-  const [body, setBody] = useState("");
-  const [conclusion, setConclusion] = useState("");
+  const [intro, setIntro] = useState("");       // 빈 문자열 초기값
+  const [body, setBody] = useState("");         // 빈 문자열 초기값
+  const [conclusion, setConclusion] = useState(""); // 빈 문자열 초기값
+
   const [updatedContent, setUpdatedContent] = useState("");
-  const [imagePrompts, setImagePrompts] = useState<
-    { id: string; prompt: string }[]
-  >([]);
+  const [imagePrompts, setImagePrompts] = useState<{ id: string; prompt: string }[]>([]);
 
   // 이미지 배열 + 이미지 객체 형태(유연한 방법)
   const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
-  const [imagesById, setImagesById] = useState<
-    Record<string, { id: string; imageUrl: string }>
-  >({});
+  const [imagesById, setImagesById] = useState<Record<string, { id: string; imageUrl: string }>>(
+    {}
+  );
 
   const [feedback, setFeedback] = useState("");
 
@@ -122,7 +123,6 @@ export function TrafficPanel() {
   // 0) 전체 state 리셋 함수
   // =========================================
   function resetAllStates() {
-    // 생성 결과 상태 초기화
     setSubKeywordlist(null);
     setToc("");
     setIntro("");
@@ -144,24 +144,16 @@ export function TrafficPanel() {
   function postProcessUpdatedContent(rawContent: string): string {
     let content = rawContent;
 
-    // -------------------------------------
     // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
-    //    (이건 건드리지 않기 위함)
-    // -------------------------------------
-    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
+    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@";
     const correctPlaceholders: string[] = [];
 
-    // 임시 교체 (예: #[image3] => "@@@CORRECT_PLACEHOLDER@@@0"
     content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
-      correctPlaceholders.push(match); // 실제 문자열 저장
+      correctPlaceholders.push(match);
       return CORRECT_MARKER + (correctPlaceholders.length - 1);
     });
 
-    // -------------------------------------
-    // 2) 잘못된 placeholder들만 교정
-    //    (#1, [2], [image3], #(4), # (5) 등)
-    //    ※ 일반 숫자(예: 2.0, 2024)는 "#", "[" 가 없으니 매칭 안 됨
-    // -------------------------------------
+    // 2) 잘못된 placeholder 교정
     content = content.replace(
       /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
       (_, g1, g2, g3) => {
@@ -170,20 +162,13 @@ export function TrafficPanel() {
       }
     );
 
-    // -------------------------------------
-    // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
-    // -------------------------------------
+    // 3) 임시 키로 대체해둔 placeholder 복원
     content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
       return correctPlaceholders[parseInt(idx, 10)];
     });
 
-    // -------------------------------------
-    // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
-    // -------------------------------------
-    content = content.replace(
-      /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
-      "$1"
-    );
+    // 4) `#[imageX]` 뒤에 { ... } 제거
+    content = content.replace(/(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi, "$1");
 
     return content;
   }
@@ -192,12 +177,8 @@ export function TrafficPanel() {
   // 7) 복사 함수
   // =========================================
 
-  // 7-1) intro + body + conclusion만 복사
   const handleCopyIntroBodyConclusion = async () => {
-    const combinedText = [intro, body, conclusion]
-      .filter((t) => t.trim().length > 0)
-      .join("\n\n");
-
+    const combinedText = [intro, body, conclusion].filter((t) => t.trim().length > 0).join("\n\n");
     try {
       if (!combinedText) {
         alert("⚠️ 복사할 내용이 없습니다.");
@@ -211,7 +192,6 @@ export function TrafficPanel() {
     }
   };
 
-  // 7-2) 텍스트 + 이미지 복사
   const handleCopyUpdatedContentWithImages = async () => {
     try {
       if (!updatedContent) {
@@ -246,9 +226,6 @@ export function TrafficPanel() {
   // [추가] 다운로드 관련 함수
   // =========================
 
-  /**
-   * (1) updatedContent를 txt 파일로 다운로드
-   */
   const handleDownloadTxt = () => {
     if (!updatedContent) {
       alert("⚠️ 다운로드할 텍스트가 없습니다.");
@@ -256,7 +233,6 @@ export function TrafficPanel() {
     }
 
     try {
-      // 이미 state에 저장된 updatedContent가 후처리된 상태이므로 그대로 사용
       const blob = new Blob([updatedContent], {
         type: "text/plain;charset=utf-8",
       });
@@ -267,10 +243,6 @@ export function TrafficPanel() {
     }
   };
 
-  /**
-   * (2) images[]를 zip으로 묶어 다운로드
-   *     이미지 파일명: 1.png, 2.png, 3.png ... 순서대로
-   */
   const handleDownloadImagesZip = async () => {
     if (!images || images.length === 0) {
       alert("⚠️ 다운로드할 이미지가 없습니다.");
@@ -279,17 +251,12 @@ export function TrafficPanel() {
     try {
       const zip = new JSZip();
       let index = 1;
-
       for (const img of images) {
-        // 이미지 데이터를 직접 fetch -> arrayBuffer
         const response = await fetch(img.imageUrl);
         const arrayBuffer = await response.arrayBuffer();
-        // zip 객체에 파일 추가
         zip.file(`${index}.png`, arrayBuffer);
         index++;
       }
-
-      // zip Blob 생성
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "images.zip");
     } catch (error) {
@@ -302,14 +269,12 @@ export function TrafficPanel() {
   // 기존 함수들 (initializeContent 등)
   // =========================================
   const updateLog = (message: string) => {
-    setDebugLogs((prevLogs) => [
-      ...prevLogs,
-      `${new Date().toISOString()}: ${message}`,
-    ]);
+    setDebugLogs((prevLogs) => [...prevLogs, `${new Date().toISOString()}: ${message}`]);
     console.log(message);
   };
 
-  const renderWithLineBreaks = (text: string) => {
+  // (2) renderWithLineBreaks에 기본값 설정
+  const renderWithLineBreaks = (text: string = "") => {
     return text.split("\n").map((line, index) => (
       <React.Fragment key={index}>
         {line}
@@ -337,10 +302,7 @@ export function TrafficPanel() {
     if (result.serviceanalysis) {
       setServiceAnalysis(result.serviceanalysis);
     }
-    if (
-      result.subkeywordlist.relatedTerms &&
-      result.subkeywordlist.relatedTerms.length > 0
-    ) {
+    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
       setSubKeywordlist(result.subkeywordlist.relatedTerms);
     } else if (
       result.subkeywordlist.autocompleteTerms &&
@@ -354,16 +316,14 @@ export function TrafficPanel() {
     return {
       serviceanalysis: result.serviceanalysis || null,
       subkeywordlist:
-        result.subkeywordlist.relatedTerms ||
-        result.subkeywordlist.autocompleteTerms ||
-        [],
+        result.subkeywordlist.relatedTerms || result.subkeywordlist.autocompleteTerms || [],
     };
   };
 
   const handleGenerateToc = async (
     mainkeyword: string,
     title: string,
-    tone: '정중체' | '음슴체',
+    tone: "정중체" | "음슴체",
     analysis: Analysis | null
   ): Promise<string> => {
     updateLog("목차 생성 중...");
@@ -377,7 +337,7 @@ export function TrafficPanel() {
     mainkeyword: string,
     title: string,
     toc: string,
-    tone: '정중체' | '음슴체',
+    tone: "정중체" | "음슴체",
     analysis: Analysis | null
   ): Promise<string> => {
     updateLog("서론 생성 중...");
@@ -392,18 +352,11 @@ export function TrafficPanel() {
     title: string,
     toc: string,
     intro: string,
-    tone: '정중체' | '음슴체',
+    tone: "정중체" | "음슴체",
     analysis: Analysis | null
   ): Promise<string> => {
     updateLog("본론 생성 중...");
-    const result = await generateBody(
-      mainkeyword,
-      title,
-      toc,
-      intro,
-      tone,
-      analysis || undefined
-    );
+    const result = await generateBody(mainkeyword, title, toc, intro, tone, analysis || undefined);
     setBody(result.body);
     updateLog("본론 생성 완료");
     return result.body;
@@ -415,7 +368,7 @@ export function TrafficPanel() {
     toc: string,
     intro: string,
     body: string,
-    tone: '정중체' | '음슴체',
+    tone: "정중체" | "음슴체",
     analysis: Analysis | null
   ): Promise<string> => {
     updateLog("결론 생성 중...");
@@ -448,18 +401,13 @@ export function TrafficPanel() {
   }> => {
     updateLog("이미지 프롬프트 생성 중...");
     const result = await generateImagePrompt(currentContent);
-    // ---------- [추가] 후처리 로직 적용 ----------
     let processedContent = "";
     if (result.updatedContent) {
-      // 1) 후처리
       processedContent = postProcessUpdatedContent(result.updatedContent);
-      // 2) state에 최종 정리된 content 저장
       setUpdatedContent(processedContent);
     }
-
     setImagePrompts(result.imagePrompts);
     updateLog("이미지 프롬프트 생성 완료");
-
     return {
       updatedContent: processedContent || "",
       imagePrompts: result.imagePrompts,
@@ -471,11 +419,8 @@ export function TrafficPanel() {
   ): Promise<{ id: string; imageUrl: string }[]> => {
     updateLog("이미지 실제 생성 중...");
     const result = await generateImage(imagePromptsData);
-
-    // 배열 상태
     setImages(result.images);
 
-    // 객체 형태로도 변환해서 보관
     const objMap: Record<string, { id: string; imageUrl: string }> = {};
     result.images.forEach((img) => {
       objMap[img.id] = img;
@@ -504,9 +449,7 @@ export function TrafficPanel() {
     setFeedback("");
   };
 
-  // =========================================
   // 통합 핸들러: 컨텐츠 생성
-  // =========================================
   const handleGenerateContent = async () => {
     if (!tone) {
       alert("⚠️ 말투를 선택해주세요.");
@@ -525,45 +468,42 @@ export function TrafficPanel() {
       setProgress(30);
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(
-        mainkeyword,                // mainkeyword 전달
+        mainkeyword,
         title,
-        tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
+        tone,
+        initResult.serviceanalysis
       );
-      console.log("title", title);
 
       setProgress(50);
       setProgressMessage("서론 생성 중...");
       const introResult = await handleGenerateIntro(
-        mainkeyword,                // mainkeyword 전달
+        mainkeyword,
         title,
         tocResult,
-        tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
+        tone,
+        initResult.serviceanalysis
       );
-      console.log("title", title);
-      console.log("tocResult", tocResult);
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
-        mainkeyword,                // mainkeyword 전달
+        mainkeyword,
         title,
         tocResult,
         introResult,
-        tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
+        tone,
+        initResult.serviceanalysis
       );
 
       setProgress(90);
       setProgressMessage("결론 생성 중...");
       const conclusionResult = await handleGenerateConclusion(
-        mainkeyword,                // mainkeyword 전달
+        mainkeyword,
         title,
         tocResult,
         introResult,
         bodyResult,
-        tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
+        tone,
+        initResult.serviceanalysis
       );
 
       updateLog("✅ 콘텐츠 생성 완료!");
@@ -578,9 +518,7 @@ export function TrafficPanel() {
     }
   };
 
-  // =========================================
   // 통합 핸들러: 이미지 생성
-  // =========================================
   const handleGenerateImagePromptAndImages = async () => {
     try {
       updateLog("이미지 생성 시작...");
@@ -594,16 +532,11 @@ export function TrafficPanel() {
         body,
         conclusion,
       };
-      const imagePromptResult = await handleGenerateImagePrompt(
-        serviceAnalysis,
-        currentContent
-      );
+      const imagePromptResult = await handleGenerateImagePrompt(serviceAnalysis, currentContent);
 
       setProgress(50);
       setProgressMessage("이미지 실제 생성 중...");
-      const imagesResult = await handleGenerateImages(
-        imagePromptResult.imagePrompts
-      );
+      const imagesResult = await handleGenerateImages(imagePromptResult.imagePrompts);
 
       setProgress(80);
       setProgressMessage("최종 결과 저장 중...");
@@ -631,7 +564,8 @@ export function TrafficPanel() {
       setProgress(100);
       setProgressMessage("이미지 생성 완료!");
       updateLog("최종 결과 저장 완료");
-      setIsContentGenerated(false); // 이미지 생성 완료 후 다시 "컨텐츠 생성" 버튼으로 전환
+      // 이미지 생성 완료 후 다시 "컨텐츠 생성" 버튼으로 전환
+      setIsContentGenerated(false);
     } catch (error) {
       updateLog(`❌ 이미지 생성 오류: ${error}`);
       console.error("이미지 생성 오류:", error);
@@ -640,9 +574,7 @@ export function TrafficPanel() {
     }
   };
 
-  // =========================================
   // 최종 콘텐츠 렌더링(이미지 치환)
-  // =========================================
   const renderUpdatedContent = () => {
     if (!updatedContent) return null;
 
@@ -696,9 +628,7 @@ export function TrafficPanel() {
     return parts;
   };
 
-  // =========================================
   // 드롭다운 상태 (다운로드와 말투 드롭다운 각각 관리)
-  // =========================================
   const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
   const downloadDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -710,9 +640,7 @@ export function TrafficPanel() {
     setIsToneDropdownOpen(!isToneDropdownOpen);
   };
 
-  // =========================================
   // 드롭다운 외부 클릭 시 닫기
-  // =========================================
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -735,27 +663,17 @@ export function TrafficPanel() {
     };
   }, []);
 
-  // =========================
-  // 최종 렌더
-  // =========================
   const isUpdatedContentExist = !!updatedContent;
 
   return (
     <div>
       <ResizablePanelGroup direction="horizontal">
-        {/* 사이드바 */}
         <SidePanel />
         <ResizableHandle />
 
-        {/* 메인 영역 */}
-        <ResizablePanel
-          defaultSize={85}
-          maxSize={85}
-          className="p-4 flex flex-col gap-4 overflow-hidden"
-        >
+        <ResizablePanel defaultSize={85} maxSize={85} className="p-4 flex flex-col gap-4 overflow-hidden">
           {/* 입력 필드 */}
           <div className="flex flex-col gap-4 p-4 rounded-md shadow bg-white">
-            {/* 키워드 및 제목 입력 */}
             <div className="flex gap-4">
               <div className="flex-2">
                 <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
@@ -779,7 +697,6 @@ export function TrafficPanel() {
 
             {/* 말투 선택 드롭다운과 버튼 */}
             <div className="flex items-end gap-4">
-              {/* 말투 선택 드롭다운 (크기 조정) */}
               <div className="w-32 relative" ref={toneDropdownRef}>
                 <Button
                   variant="outline"
@@ -796,12 +713,7 @@ export function TrafficPanel() {
                     viewBox="0 0 24 24"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 9l-7 7-7-7"
-                    ></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                   </svg>
                 </Button>
                 {isToneDropdownOpen && (
@@ -828,7 +740,6 @@ export function TrafficPanel() {
                 )}
               </div>
 
-              {/* 조건부 버튼: 컨텐츠 생성 또는 이미지 생성 */}
               {!isContentGenerated ? (
                 <Button
                   onClick={handleGenerateContent}
@@ -849,14 +760,12 @@ export function TrafficPanel() {
             </div>
           </div>
 
-          {/* 진행도 표시 */}
           {progress > 0 && (
             <div className="px-4">
               <ProgressBar progress={progress} message={progressMessage} />
             </div>
           )}
 
-          {/* 생성된 텍스트 / 이미지 미리보기 영역 */}
           <div className="flex-1 bg-white rounded-md p-4">
             {/* (1) updatedContent가 없을 때: intro/body/conclusion + "복사하기" 버튼 */}
             {!isUpdatedContentExist && isContentGenerated && (
@@ -865,19 +774,11 @@ export function TrafficPanel() {
                   <h3 className="font-bold mb-2 flex items-center">
                     📑 생성된 콘텐츠
                     <div className="flex-1" />
-                    <Button
-                      className="ml-auto"
-                      onClick={handleCopyIntroBodyConclusion}
-                    >
+                    <Button className="ml-auto" onClick={handleCopyIntroBodyConclusion}>
                       📋 복사하기
                     </Button>
-                    {/* ▼ 추가: 다운로드 드롭다운 */}
                     <div className="relative inline-block ml-2" ref={downloadDropdownRef}>
-                      <Button
-                        variant="outline"
-                        onClick={toggleDownloadDropdown}
-                        className="flex items-center"
-                      >
+                      <Button variant="outline" onClick={toggleDownloadDropdown} className="flex items-center">
                         다운로드 ▼
                       </Button>
                       {isDownloadDropdownOpen && (
@@ -886,12 +787,7 @@ export function TrafficPanel() {
                             className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                             onClick={() => {
                               toggleDownloadDropdown();
-                              // 텍스트 다운로드
-                              const combinedText = [
-                                intro,
-                                body,
-                                conclusion,
-                              ]
+                              const combinedText = [intro, body, conclusion]
                                 .filter((t) => t.trim().length > 0)
                                 .join("\n\n");
                               if (!combinedText) {
@@ -920,24 +816,12 @@ export function TrafficPanel() {
                     </div>
                   </h3>
                 </div>
-                <div className="font-bold whitespace-pre-wrap break-words">
-                  📝 키워드: {mainkeyword}
-                </div>
-                <div className="font-bold whitespace-pre-wrap break-words">
-                  🏷️ 제목: {title}
-                </div>
-                <div className="font-bold whitespace-pre-wrap break-words">
-                  📚 목차: {toc}
-                </div>
-                <div className="whitespace-pre-wrap break-words">
-                  {renderWithLineBreaks(intro)}
-                </div>
-                <div className="whitespace-pre-wrap break-words">
-                  {renderWithLineBreaks(body)}
-                </div>
-                <div className="whitespace-pre-wrap break-words">
-                  {renderWithLineBreaks(conclusion)}
-                </div>
+                <div className="font-bold whitespace-pre-wrap break-words">📝 키워드: {mainkeyword}</div>
+                <div className="font-bold whitespace-pre-wrap break-words">🏷️ 제목: {title}</div>
+                <div className="font-bold whitespace-pre-wrap break-words">📚 목차: {toc}</div>
+                <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(intro)}</div>
+                <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(body)}</div>
+                <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(conclusion)}</div>
               </div>
             )}
 
@@ -947,16 +831,9 @@ export function TrafficPanel() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold">최종 콘텐츠:</span>
                   <div className="flex items-center gap-2">
-                    <Button onClick={handleCopyUpdatedContentWithImages}>
-                      📋 복사하기
-                    </Button>
-                    {/* ▼ 추가: 다운로드 드롭다운 */}
+                    <Button onClick={handleCopyUpdatedContentWithImages}>📋 복사하기</Button>
                     <div className="relative inline-block" ref={downloadDropdownRef}>
-                      <Button
-                        variant="outline"
-                        onClick={toggleDownloadDropdown}
-                        className="flex items-center"
-                      >
+                      <Button variant="outline" onClick={toggleDownloadDropdown} className="flex items-center">
                         다운로드 ▼
                       </Button>
                       {isDownloadDropdownOpen && (
