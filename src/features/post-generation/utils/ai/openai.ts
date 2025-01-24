@@ -6,7 +6,8 @@ const OPENAI_CONFIG = {
     KEY: process.env.OPENAI_API_KEY,
     MODEL: "gpt-4o",
     MAX_TOKENS: 6000,
-  },
+    temperature: 0.7,
+  }
 };
 
 export async function makeOpenAiRequest<T>(
@@ -42,6 +43,7 @@ export async function makeOpenAiRequest<T>(
       method: "POST",
       headers: headers as Record<string, string>,
       body: JSON.stringify(payload),
+      cache: 'no-cache',
     });
 
     if (!response.ok) {
