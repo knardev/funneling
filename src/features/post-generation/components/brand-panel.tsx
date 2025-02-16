@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import React from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -11,310 +12,140 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-// Import your server actions
+// [추가] JSZip, file-saver
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
+// Import your server actions (기존 그대로)
 import { initializeContent } from "@/features/post-generation/actions/others/initialize_content";
-import { generateTitle } from "@/features/post-generation/actions/content/generate_title";
 import { generateToc } from "@/features/post-generation/actions/content/generate_toc";
 import { generateIntro } from "@/features/post-generation/actions/content/generate_intro";
 import { generateBody } from "@/features/post-generation/actions/content/generate_body";
 import { generateConclusion } from "@/features/post-generation/actions/content/generate_conclusion";
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
-
-import { Analysis, FinalResult } from "../types";
 import { saveFinalResult } from "../actions/others/save_finalResult";
+import { Analysis, FinalResult } from "../types";
+import { saveFeedback } from "../actions/others/saveFeedback";
+import { SidePanel } from "./side-panel";
+
+// 진행도 표시 컴포넌트 (기존 그대로)
+function ProgressBar({
+  progress,
+  message,
+}: {
+  progress: number;
+  message: string;
+}) {
+  const clampedProgress = Math.max(0, Math.min(100, progress));
+
+  return (
+    <div className="mt-3 mb-2 w-full">
+      {progress > 0 && progress < 100 && (
+        <p className="text-sm text-gray-700 mb-1 font-medium">
+          {message} ({clampedProgress}%)
+        </p>
+      )}
+      {progress === 100 && (
+        <p className="text-sm mb-1 font-medium">완료되었습니다!</p>
+      )}
+      <div className="w-full bg-gray-300 h-3 rounded-md">
+        <div
+          className="bg-blue-500 h-3 rounded-md transition-all duration-300"
+          style={{ width: `${clampedProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function BrandPanel() {
-  // Input states
-  const [mainkeyword, setMainKeyword] = useState("");
+  // ==========================
+  // A) 프로필 (드롭다운) 추가
+  // ==========================
+  const [profiles, setProfiles] = useState<
+    { id: string; name: string; value: string }[]
+  >([]);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
+
+  // 컴포넌트 마운트 시점에 로컬스토리지의 프로필 불러오기
+  useEffect(() => {
+    const storedProfiles = JSON.parse(localStorage.getItem("profiles") || "[]");
+    setProfiles(storedProfiles);
+  }, []);
+
+  // 프로필 선택 시, 업장명→personaServiceName / 핵심가치→serviceAdvantages 세팅
+  const handleSelectProfile = (id: string) => {
+    setSelectedProfileId(id);
+    const foundProfile = profiles.find((p) => p.id === id);
+    if (foundProfile) {
+      setPersonaServiceName(foundProfile.name);
+      setServiceAdvantages(foundProfile.value);
+    }
+  };
+
+  // ===================
+  // 1) 입력 상태
+  // ===================
+  const [mainkeyword, setMainKeyword] = useState(""); // 기존: 키워드
+  const [title, setTitle] = useState("");             // 기존: 제목
+
+  // [추가] 주제(Topic) 입력
+  const [topic, setTopic] = useState("");
+
+  // [기존] 페르소나/서비스 관련
   const [personaServiceName, setPersonaServiceName] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [serviceAdvantages, setServiceAdvantages] = useState("");
 
-  // Result states
+  // ===================
+  // 2) 결과 상태
+  // ===================
   const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
     industry_analysis: null,
     advantage_analysis: null,
-    target_needs: null
+    target_needs: null,
   });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
-  const [title, setTitle] = useState("");
   const [toc, setToc] = useState("");
   const [intro, setIntro] = useState("");
   const [body, setBody] = useState("");
   const [conclusion, setConclusion] = useState("");
   const [updatedContent, setUpdatedContent] = useState("");
-  const [imagePrompts, setImagePrompts] = useState<{id:string,prompt:string}[]>([]);
-  const [images, setImages] = useState<{id:string,imageUrl:string}[]>([]);
+  const [imagePrompts, setImagePrompts] = useState<
+    { id: string; prompt: string }[]
+  >([]);
 
-  // Debug log state
+  // 이미지 배열 + 이미지 객체 형태(유연한 방법)
+  const [images, setImages] = useState<{ id: string; imageUrl: string }[]>([]);
+  const [imagesById, setImagesById] = useState<
+    Record<string, { id: string; imageUrl: string }>
+  >({});
+
+  const [feedback, setFeedback] = useState("");
+
+  // ===================
+  // 3) 디버그 로그
+  // ===================
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
-  const persona = {
-    service_industry: serviceType,
-    service_name: personaServiceName,
-    service_advantage: serviceAdvantages,
-  };
+  // ===================
+  // 4) 진행도
+  // ===================
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
 
+  // ===================
+  // 5) 생성 완료 여부
+  // ===================
+  const [isContentGenerated, setIsContentGenerated] = useState(false);
 
-  const content = {
-    intro,
-    body,
-    conclusion
-  };
-
-  // Utility function to update logs
-  const updateLog = (message: string) => {
-    setDebugLogs((prevLogs) => [
-      ...prevLogs,
-      `${new Date().toISOString()}: ${message}`,
-    ]);
-  };
-
-  // Individual step execution handlers
-  const handleInitializeContent = async () => {
-    updateLog("Initializing content...");
-    const hasAllPersonaData=personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim()
-    const result = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
-    if (result.serviceanalysis) {
-      setServiceAnalysis(result.serviceanalysis);
-    }
-    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
-      setSubKeywordlist(result.subkeywordlist.relatedTerms);
-    } else if (result.subkeywordlist.autocompleteTerms && result.subkeywordlist.autocompleteTerms.length > 0) {
-      setSubKeywordlist(result.subkeywordlist.autocompleteTerms);
-    } else {
-      setSubKeywordlist(null);
-    }
-    updateLog(`Content initialized: ${JSON.stringify(result)}`);
-  };
-
-// // subkeywordlist 중 subkeywords 선택
-//   const handleGenerateTitle = async () => {
-//     updateLog("Generating title...");
-//     const result = await generateTitle(mainkeyword,subkeywordlist, serviceAnalysis);
-//     setTitle(result.title);
-//     setSubKeywords(result.subkeywords);
-//     updateLog(`Title generated: ${JSON.stringify(result)}`);
-//   };
-
-  const handleGenerateToc = async () => {
-    updateLog("Generating TOC...");
-    const result = await generateToc(mainkeyword, title, serviceAnalysis);
-    setToc(result.toc);
-    updateLog(`TOC generated: ${JSON.stringify(result)}`);
-  };
-
-  const handleGenerateIntro = async () => {
-    updateLog("Generating intro...");
-    const result = await generateIntro(mainkeyword, title, toc, serviceAnalysis);
-    setIntro(result.intro);
-    updateLog(`Intro generated: ${JSON.stringify(result)}`);
-  };
-
-  const handleGenerateBody = async () => {
-    updateLog("Generating body...");
-    const result = await generateBody(mainkeyword, title, toc, intro, serviceAnalysis);
-    setBody(result.body);
-    updateLog(`Body generated: ${JSON.stringify(result)}`);
-  };
-
-  const handleGenerateConclusion = async () => {
-    updateLog("Generating conclusion...");
-    const result = await generateConclusion(
-      mainkeyword,
-      title,
-      toc,
-      intro,
-      body,
-      serviceAnalysis
-    );
-    setConclusion(result.conclusion);
-    updateLog(`Conclusion generated: ${JSON.stringify(result)}`);
-  };
-
-  const handleGenerateImagePrompt = async () => {
-    updateLog("Generating image prompts...");
-    const result = await generateImagePrompt({
-      intro,
-      body,
-      conclusion,
-    }, serviceAnalysis);
-    if(result.updatedContent){
-      setUpdatedContent(result.updatedContent)
-      setImagePrompts(result.imagePrompts);
-    }
-    updateLog(`Image prompts generated: ${JSON.stringify(result.imagePrompts)}`);
-  };
-
-  const handleGenerateImages = async () => {
-    updateLog("Generating images...");
-    const result = await generateImage(
-      imagePrompts
-    );
-    setImages(result.images);
-    updateLog(`Images generated: ${JSON.stringify(result.images)}`);
-  };
-  
-  const handleSaveFinalResult = async () => {
-    try{
-    updateLog("Saving final result...");
-    const finalResult:FinalResult={
-      mainKeyword:mainkeyword,
-      persona,
-      service_analysis:serviceAnalysis,
-      title,
-      toc,
-      content,
-      imagePrompts,
-      images,
-      updatedContent
-    }
-    const result = await saveFinalResult(finalResult);
-    updateLog(`Final result saved: ${JSON.stringify(result)}`);
-    }catch(error){
-      updateLog(`Error saving final result: ${error}`);
-      console.error("Error saving final result:", error);
-    }
-  };
-
-  // Run all steps in sequence
-  const handleRunAll = async () => {
-    updateLog("Running all steps...");
-    
-    try {
-      // Initialize Content
-      updateLog("Initializing content...");
-      const hasAllPersonaData = personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
-      const initResult = await initializeContent(mainkeyword, hasAllPersonaData ? persona : undefined);
-      updateLog(`Content initialized: ${JSON.stringify(initResult)}`);
-      setServiceAnalysis(initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null });
-      if (initResult.subkeywordlist.relatedTerms && initResult.subkeywordlist.relatedTerms.length > 0) {
-        setSubKeywordlist(initResult.subkeywordlist.relatedTerms);
-      } else if (initResult.subkeywordlist.autocompleteTerms && initResult.subkeywordlist.autocompleteTerms.length > 0) {
-        setSubKeywordlist(initResult.subkeywordlist.autocompleteTerms);
-      } else {
-        setSubKeywordlist(null);
-      }
-      
-    //   // Generate Title
-    //   updateLog("Generating title...");
-    //   const titleResult = await generateTitle(
-    //     mainkeyword,
-    //     initResult.subkeywordlist,
-    //     initResult.serviceanalysis
-    //   );
-    //   setTitle(titleResult.title);
-    //   setSubKeywords(titleResult.subkeywords);
-    //   updateLog(`Title generated: ${JSON.stringify(titleResult)}`);
-      
-      // Generate TOC
-      updateLog("Generating TOC...");
-      const tocResult = await generateToc(
-        mainkeyword,
-        title,
-        initResult.serviceanalysis
-      );
-      setToc(tocResult.toc);
-      updateLog(`TOC generated: ${JSON.stringify(tocResult)}`);
-      
-      // Generate Intro
-      updateLog("Generating intro...");
-      const introResult = await generateIntro(
-        mainkeyword,
-        title,
-        toc,
-        initResult.serviceanalysis
-      );
-      setIntro(introResult.intro);
-      updateLog(`Intro generated: ${JSON.stringify(introResult)}`);
-      
-      // Generate Body
-      updateLog("Generating body...");
-      const bodyResult = await generateBody(
-        mainkeyword,
-        title,
-        toc,
-        intro,
-        initResult.serviceanalysis
-      );
-      setBody(bodyResult.body);
-      updateLog(`Body generated: ${JSON.stringify(bodyResult)}`);
-      
-      // Generate Conclusion
-      updateLog("Generating conclusion...");
-      const conclusionResult = await generateConclusion(
-        mainkeyword,
-        title,
-        tocResult.toc,
-        introResult.intro,
-        bodyResult.body,
-        initResult.serviceanalysis
-      );
-      setConclusion(conclusionResult.conclusion);
-      updateLog(`Conclusion generated: ${JSON.stringify(conclusionResult)}`);
-      
-      // Generate Image Prompt
-      updateLog("Generating image prompts...");
-      const imagePromptResult = await generateImagePrompt(
-        {
-          intro: introResult.intro,
-          body: bodyResult.body,
-          conclusion: conclusionResult.conclusion,
-        },
-        initResult.serviceanalysis
-      );
-      setUpdatedContent(imagePromptResult.updatedContent || "");
-      setImagePrompts(imagePromptResult.imagePrompts);
-      updateLog(`Image prompts generated: ${JSON.stringify(imagePromptResult.imagePrompts)}`);
-      
-      // Generate Images
-      updateLog("Generating images...");
-      const imagesResult = await generateImage(imagePromptResult.imagePrompts);
-      setImages(imagesResult.images);
-      updateLog(`Images generated: ${JSON.stringify(imagesResult.images)}`);
-      
-      // Save Final Result
-      updateLog("Saving final result...");
-      const finalResult: FinalResult = {
-        mainKeyword:mainkeyword,
-        persona,
-        service_analysis: initResult.serviceanalysis || { industry_analysis: null, advantage_analysis: null, target_needs: null },
-        title: title,
-        toc: tocResult.toc,
-        content: {
-          intro: introResult.intro,
-          body: bodyResult.body,
-          conclusion: conclusionResult.conclusion,
-        },
-        imagePrompts: imagePromptResult.imagePrompts,
-        images: imagesResult.images,
-        updatedContent: imagePromptResult.updatedContent || "",
-      };
-      const saveResult = await saveFinalResult(finalResult);
-      updateLog(`Final result saved: ${JSON.stringify(saveResult)}`);
-      
-      updateLog("All steps completed.");
-      console.log("All steps completed.");
-    } catch (error) {
-      updateLog(`Error during run all steps: ${error}`);
-      console.error("Error during run all steps:", error);
-    }
-  };
-
-  // Reset all states
-  const handleResetStates = () => {
-    setMainKeyword("");
-    setPersonaServiceName("");
-    setServiceType("");
-    setServiceAdvantages("");
+  // =========================================
+  // 0) 전체 state 리셋 함수
+  // =========================================
+  function resetAllStates() {
+    // 생성 결과 상태 초기화
     setSubKeywordlist(null);
-    setServiceAnalysis({
-      industry_analysis: null,
-      advantage_analysis: null,
-      target_needs: null
-    });
-    setTitle("");
     setToc("");
     setIntro("");
     setBody("");
@@ -322,109 +153,766 @@ export function BrandPanel() {
     setUpdatedContent("");
     setImagePrompts([]);
     setImages([]);
-    setDebugLogs([]);
-    updateLog("States reset.");
+    setImagesById({});
+    setProgress(0);
+    setProgressMessage("");
+    setIsContentGenerated(false);
+  }
+
+  // =========================================
+  // [추가] 후처리 함수
+  // =========================================
+  function postProcessUpdatedContent(rawContent: string): string {
+    let content = rawContent;
+
+    // (1) 이미 올바른 #[imageX] 마커는 임시로 빼놓기
+    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@";
+    const correctPlaceholders: string[] = [];
+
+    content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
+      correctPlaceholders.push(match); // 실제 문자열 저장
+      return CORRECT_MARKER + (correctPlaceholders.length - 1);
+    });
+
+    // (2) 잘못된 placeholder만 교정 (#1, [2], [image3] 등)
+    content = content.replace(
+      /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
+      (_, g1, g2, g3) => {
+        const imageNum = g1 || g2 || g3;
+        return `#[image${imageNum}]`;
+      }
+    );
+
+    // (3) 임시 키로 대체해둔 올바른 placeholder 복원
+    content = content.replace(
+      new RegExp(CORRECT_MARKER + "(\\d+)", "g"),
+      (_, idx) => {
+        return correctPlaceholders[parseInt(idx, 10)];
+      }
+    );
+
+    // (4) #[imageX] 뒤에 { ... } 가 붙어 있으면 제거
+    content = content.replace(
+      /(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi,
+      "$1"
+    );
+
+    return content;
+  }
+
+  // =========================================
+  // 7) 복사 함수
+  // =========================================
+
+  // 7-1) intro + body + conclusion만 복사
+  const handleCopyIntroBodyConclusion = async () => {
+    const combinedText = [intro, body, conclusion]
+      .filter((t) => t.trim().length > 0)
+      .join("\n\n");
+
+    try {
+      if (!combinedText) {
+        alert("⚠️ 복사할 내용이 없습니다.");
+        return;
+      }
+      await navigator.clipboard.writeText(combinedText);
+      alert("✅ 본문이 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 본문 복사 중 오류가 발생했습니다.");
+    }
   };
 
+  // 7-2) 텍스트 + 이미지 복사
+  const handleCopyUpdatedContentWithImages = async () => {
+    try {
+      if (!updatedContent) {
+        alert("⚠️ 복사할 콘텐츠가 없습니다.");
+        return;
+      }
+      let htmlContent = updatedContent.replace(/\\n/g, "\n");
+      htmlContent = htmlContent
+        .split("\n")
+        .map((line) =>
+          line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const imageObj = imagesById[number];
+            return imageObj
+              ? `<img src="${imageObj.imageUrl}" alt="Image ${number}" style="max-width: 300px; display: block; margin: 8px 0;" />`
+              : match;
+          })
+        )
+        .join("<br>");
+
+      const htmlBlob = new Blob([htmlContent], { type: "text/html" });
+      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+      await navigator.clipboard.write([clipboardItem]);
+
+      alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
+    }
+  };
+
+  // =========================
+  // [추가] 다운로드 관련 함수
+  // =========================
+
+  /**
+   * (1) updatedContent를 txt 파일로 다운로드
+   */
+  const handleDownloadTxt = () => {
+    if (!updatedContent) {
+      alert("⚠️ 다운로드할 텍스트가 없습니다.");
+      return;
+    }
+
+    try {
+      const blob = new Blob([updatedContent], {
+        type: "text/plain;charset=utf-8",
+      });
+      saveAs(blob, "content.txt");
+    } catch (error) {
+      console.error("❌ TXT 다운로드 실패:", error);
+      alert("❌ TXT 다운로드 중 오류가 발생했습니다.");
+    }
+  };
+
+  /**
+   * (2) images[]를 zip으로 묶어 다운로드
+   *     이미지 파일명: 1.png, 2.png, 3.png ... 순서대로
+   */
+  const handleDownloadImagesZip = async () => {
+    if (!images || images.length === 0) {
+      alert("⚠️ 다운로드할 이미지가 없습니다.");
+      return;
+    }
+    try {
+      const zip = new JSZip();
+      let index = 1;
+
+      for (const img of images) {
+        const response = await fetch(img.imageUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        zip.file(`${index}.png`, arrayBuffer);
+        index++;
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "images.zip");
+    } catch (error) {
+      console.error("❌ 이미지 ZIP 다운로드 실패:", error);
+      alert("❌ 이미지 ZIP 다운로드 중 오류가 발생했습니다.");
+    }
+  };
+
+  // =========================================
+  // 기존 함수들 (initializeContent 등)
+  // =========================================
+  const updateLog = (message: string) => {
+    setDebugLogs((prevLogs) => [
+      ...prevLogs,
+      `${new Date().toISOString()}: ${message}`,
+    ]);
+    console.log(message);
+  };
+
+  const renderWithLineBreaks = (text: string) => {
+    return text.split("\n").map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        <br />
+      </React.Fragment>
+    ));
+  };
+
+  const handleInitializeContent = async (): Promise<{
+    serviceanalysis: Analysis | null;
+    subkeywordlist: string[] | null;
+  }> => {
+    updateLog("초기화 중...");
+
+    // 예시: 주제(topic)도 initializeContent에 활용하고 싶다면,
+    // API 호출 시 파라미터로 넘기는 로직을 추가하면 됩니다.
+    const hasAllPersonaData =
+      personaServiceName.trim() && serviceType.trim() && serviceAdvantages.trim();
+    const personaData = hasAllPersonaData
+      ? {
+          service_industry: serviceType,
+          service_name: personaServiceName,
+          service_advantage: serviceAdvantages,
+        }
+      : undefined;
+
+    // 현재는 topic 파라미터가 별도로 없으므로, 필요 시 아래와 같이 확장:
+    // const result = await initializeContent(mainkeyword, personaData, topic);
+    const result = await initializeContent(mainkeyword, personaData);
+
+    if (result.serviceanalysis) {
+      setServiceAnalysis(result.serviceanalysis);
+    }
+    if (
+      result.subkeywordlist.relatedTerms &&
+      result.subkeywordlist.relatedTerms.length > 0
+    ) {
+      setSubKeywordlist(result.subkeywordlist.relatedTerms);
+    } else if (
+      result.subkeywordlist.autocompleteTerms &&
+      result.subkeywordlist.autocompleteTerms.length > 0
+    ) {
+      setSubKeywordlist(result.subkeywordlist.autocompleteTerms);
+    } else {
+      setSubKeywordlist(null);
+    }
+    updateLog("콘텐츠 초기화 완료");
+    return {
+      serviceanalysis: result.serviceanalysis || null,
+      subkeywordlist:
+        result.subkeywordlist.relatedTerms ||
+        result.subkeywordlist.autocompleteTerms ||
+        [],
+    };
+  };
+
+  const handleGenerateToc = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string
+  ): Promise<string> => {
+    updateLog("목차 생성 중...");
+    const result = await generateToc(mainkeyword, currentTitle);
+    setToc(result.toc);
+    updateLog("목차 생성 완료");
+    return result.toc;
+  };
+
+  const handleGenerateIntro = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string
+  ): Promise<string> => {
+    updateLog("서론 생성 중...");
+    const result = await generateIntro(mainkeyword, currentTitle, currentToc);
+    setIntro(result.intro);
+    updateLog("서론 생성 완료");
+    return result.intro;
+  };
+
+  const handleGenerateBody = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string,
+    currentIntro: string
+  ): Promise<string> => {
+    updateLog("본론 생성 중...");
+    const result = await generateBody(
+      mainkeyword,
+      currentTitle,
+      currentToc,
+      currentIntro
+    );
+    setBody(result.body);
+    updateLog("본론 생성 완료");
+    return result.body;
+  };
+
+  const handleGenerateConclusion = async (
+    serviceanalysis: Analysis | null,
+    currentTitle: string,
+    currentToc: string,
+    currentIntro: string,
+    currentBody: string
+  ): Promise<string> => {
+    updateLog("결론 생성 중...");
+    const result = await generateConclusion(
+      mainkeyword,
+      currentTitle,
+      currentToc,
+      currentIntro,
+      currentBody
+    );
+    setConclusion(result.conclusion);
+    updateLog("결론 생성 완료");
+    return result.conclusion;
+  };
+
+  const handleGenerateImagePrompt = async (
+    serviceanalysis: Analysis | null,
+    currentContent: {
+      title: string;
+      toc: string[];
+      intro: string;
+      body: string;
+      conclusion: string;
+    }
+  ): Promise<{
+    updatedContent: string;
+    imagePrompts: { id: string; prompt: string }[];
+  }> => {
+    updateLog("이미지 프롬프트 생성 중...");
+    const result = await generateImagePrompt(currentContent);
+
+    let processedContent = "";
+    if (result.updatedContent) {
+      // 후처리
+      processedContent = postProcessUpdatedContent(result.updatedContent);
+      setUpdatedContent(processedContent);
+    }
+
+    setImagePrompts(result.imagePrompts);
+    updateLog("이미지 프롬프트 생성 완료");
+    return {
+      updatedContent: processedContent || "",
+      imagePrompts: result.imagePrompts,
+    };
+  };
+
+  const handleGenerateImages = async (
+    imagePromptsData: { id: string; prompt: string }[]
+  ): Promise<{ id: string; imageUrl: string }[]> => {
+    updateLog("이미지 실제 생성 중...");
+    const result = await generateImage(imagePromptsData);
+
+    setImages(result.images);
+
+    // 객체 형태로도 변환해서 보관
+    const objMap: Record<string, { id: string; imageUrl: string }> = {};
+    result.images.forEach((img) => {
+      objMap[img.id] = img;
+    });
+    setImagesById(objMap);
+
+    updateLog("이미지 생성 완료");
+    return result.images;
+  };
+
+  const handleSaveFinalResult = async (finalResult: FinalResult) => {
+    try {
+      updateLog("최종 결과 저장 중...");
+      await saveFinalResult(finalResult);
+      updateLog("최종 결과 저장 완료");
+    } catch (error) {
+      updateLog(`최종 결과 저장 오류: ${error}`);
+      console.error("최종 결과 저장 오류:", error);
+    }
+  };
+
+  const handleSaveFeedback = async () => {
+    updateLog("피드백 전송 중...");
+    const result = await saveFeedback(feedback);
+    updateLog("피드백 전송 완료");
+    setFeedback("");
+  };
+
+  // =========================================
+  // 통합 핸들러: 컨텐츠 생성
+  // =========================================
+  const handleGenerateContent = async () => {
+    if (updatedContent) {
+      resetAllStates();
+    }
+    try {
+      updateLog("🔄 콘텐츠 생성 시작...");
+      setProgress(10);
+      setProgressMessage("컨텐츠 초기화 중...");
+
+      // (1) 컨텐츠 초기화
+      const initResult = await handleInitializeContent();
+
+      setProgress(30);
+      setProgressMessage("목차 생성 중...");
+      const tocResult = await handleGenerateToc(initResult.serviceanalysis, title);
+
+      setProgress(50);
+      setProgressMessage("서론 생성 중...");
+      const introResult = await handleGenerateIntro(
+        initResult.serviceanalysis,
+        title,
+        tocResult
+      );
+
+      setProgress(70);
+      setProgressMessage("본론 생성 중...");
+      const bodyResult = await handleGenerateBody(
+        initResult.serviceanalysis,
+        title,
+        tocResult,
+        introResult
+      );
+
+      setProgress(90);
+      setProgressMessage("결론 생성 중...");
+      const conclusionResult = await handleGenerateConclusion(
+        initResult.serviceanalysis,
+        title,
+        tocResult,
+        introResult,
+        bodyResult
+      );
+
+      updateLog("✅ 콘텐츠 생성 완료!");
+      setIsContentGenerated(true);
+      setProgress(100);
+      setProgressMessage("컨텐츠 생성 완료!");
+    } catch (error) {
+      updateLog(`❌ 콘텐츠 생성 오류: ${error}`);
+      console.error("콘텐츠 생성 오류:", error);
+      setProgress(0);
+      setProgressMessage("");
+    }
+  };
+
+  // =========================================
+  // 통합 핸들러: 이미지 생성
+  // =========================================
+  const handleGenerateImagePromptAndImages = async () => {
+    try {
+      updateLog("이미지 생성 시작...");
+      setProgress(10);
+      setProgressMessage("이미지 프롬프트 생성 중...");
+
+      const currentContent = {
+        title,
+        toc: [toc],
+        intro,
+        body,
+        conclusion,
+      };
+      const imagePromptResult = await handleGenerateImagePrompt(
+        serviceAnalysis,
+        currentContent
+      );
+
+      setProgress(50);
+      setProgressMessage("이미지 실제 생성 중...");
+      const imagesResult = await handleGenerateImages(
+        imagePromptResult.imagePrompts
+      );
+
+      setProgress(80);
+      setProgressMessage("최종 결과 저장 중...");
+      const finalResult: FinalResult = {
+        mainKeyword: mainkeyword,
+        persona: {
+          service_industry: serviceType,
+          service_name: personaServiceName,
+          service_advantage: serviceAdvantages,
+        },
+        service_analysis: serviceAnalysis,
+        title,
+        toc,
+        content: {
+          intro,
+          body,
+          conclusion,
+        },
+        imagePrompts: imagePromptResult.imagePrompts,
+        images: imagesResult,
+        updatedContent: imagePromptResult.updatedContent || "",
+      };
+      await handleSaveFinalResult(finalResult);
+
+      setProgress(100);
+      setProgressMessage("이미지 생성 완료!");
+      updateLog("최종 결과 저장 완료");
+    } catch (error) {
+      updateLog(`❌ 이미지 생성 오류: ${error}`);
+      console.error("이미지 생성 오류:", error);
+      setProgress(0);
+      setProgressMessage("");
+    }
+  };
+
+  // =========================================
+  // 최종 콘텐츠 렌더링(이미지 치환)
+  // =========================================
+  const renderUpdatedContent = () => {
+    if (!updatedContent) return null;
+
+    const regex = /#\[image\s*(\d+)\]/g;
+    const parts: React.ReactNode[] = [];
+    const textStyle = { whiteSpace: "pre-wrap", display: "inline" };
+
+    const content = updatedContent.replace(/\\n/g, "\n");
+    let match;
+    let lastIndex = 0;
+
+    while ((match = regex.exec(content)) !== null) {
+      const [placeholder, number] = match;
+      const index = match.index;
+
+      if (lastIndex < index) {
+        parts.push(
+          <span key={`text-${lastIndex}`} style={textStyle}>
+            {content.substring(lastIndex, index)}
+          </span>
+        );
+      }
+
+      const imageObj = imagesById[number];
+      parts.push(
+        imageObj ? (
+          <img
+            key={`image-${number}`}
+            src={imageObj.imageUrl}
+            alt={`Image ${number}`}
+            className="my-4 max-w-xs h-auto rounded-md object-contain"
+          />
+        ) : (
+          <span key={`placeholder-${number}`} style={textStyle}>
+            {placeholder}
+          </span>
+        )
+      );
+
+      lastIndex = regex.lastIndex;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(
+        <span key={`text-${lastIndex}`} style={textStyle}>
+          {content.substring(lastIndex)}
+        </span>
+      );
+    }
+
+    return parts;
+  };
+
+  // =========================================
+  // 드롭다운 열림/닫힘 상태
+  // =========================================
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  // =========================
+  // 최종 렌더
+  // =========================
+  const isUpdatedContentExist = !!updatedContent;
+
   return (
-    <div className="h-full">
+    <div>
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={25} maxSize={25}>
-          <div className="p-4 flex flex-col gap-4 h-full overflow-y-auto">
-            <h2>Initial Input</h2>
-            <div>
-              <Label>Keyword</Label>
+        {/* 사이드바 */}
+        <SidePanel />
+        <ResizableHandle />
+
+        {/* 메인 영역 */}
+        <ResizablePanel
+          defaultSize={85}
+          maxSize={85}
+          className="p-4 flex flex-col gap-4 overflow-hidden"
+        >
+          {/* (1) 프로필 드롭다운 + 주제(Topic) 추가 */}
+          <div className="flex gap-4 p-4 items-start rounded-md shadow bg-white">
+            {/* 드롭다운 */}
+            <div className="flex flex-col">
+              <label className="font-bold mb-2">프로필 선택</label>
+              <select
+                className="border p-2 rounded"
+                value={selectedProfileId}
+                onChange={(e) => handleSelectProfile(e.target.value)}
+              >
+                <option value="">프로필 선택</option>
+                {profiles.map((p) => (
+                  <option value={p.id} key={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 주제(Topic) 입력 */}
+            <div className="flex flex-col">
+              <label className="font-bold mb-2">주제 입력</label>
               <Input
-                placeholder="Enter keyword"
+                placeholder="주제를 입력하세요"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* (2) 기존 입력 필드 (키워드/제목 등) */}
+          <div className="flex gap-4 p-4 items-center rounded-md shadow bg-white">
+            <div className="flex-2">
+              <h2 className="text-lg font-bold mb-2">키워드 입력</h2>
+              <Input
+                placeholder="키워드를 입력하세요"
                 value={mainkeyword}
                 onChange={(e) => setMainKeyword(e.target.value)}
+                className="w-52"
               />
             </div>
-            <div>
-              <Label>Title</Label>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold mb-2">제목 입력</h2>
               <Input
-                placeholder="Enter title"
+                placeholder="제목을 입력하세요"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                className="w-full"
               />
             </div>
-            <div>
-              <Label>Persona Service Name</Label>
-              <Input
-                placeholder="Enter persona service name"
-                value={personaServiceName}
-                onChange={(e) => setPersonaServiceName(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Service Industry</Label>
-              <Input
-                placeholder="Enter service industry"
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Service Advantages</Label>
-              <Textarea
-                placeholder="Enter service advantages"
-                value={serviceAdvantages}
-                onChange={(e) => setServiceAdvantages(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleInitializeContent}>
-                Initialize Content
+
+            {/* 
+              버튼 표시 로직:
+              - 아직 컨텐츠 생성 안 됐거나, 최종 콘텐츠(updatedContent)가 존재하면 → "컨텐츠 생성"
+              - 그 외(컨텐츠만 생성된 상태, 이미지 아직 생성 안된 상태) → "이미지 생성"
+            */}
+            {!isContentGenerated || isUpdatedContentExist ? (
+              <Button
+                onClick={handleGenerateContent}
+                disabled={progress > 0 && progress < 100}
+                className="mt-auto justify-end"
+              >
+                📝 컨텐츠 생성
               </Button>
-              <Button onClick={handleGenerateToc}>Generate TOC</Button>
-              <Button onClick={handleGenerateIntro}>Generate Intro</Button>
-              <Button onClick={handleGenerateBody}>Generate Body</Button>
-              <Button onClick={handleGenerateConclusion}>
-                Generate Conclusion
+            ) : (
+              <Button
+                onClick={handleGenerateImagePromptAndImages}
+                disabled={progress > 0 && progress < 100}
+                className="mt-auto justify-end"
+              >
+                이미지 생성
               </Button>
-              <Button onClick={handleGenerateImagePrompt}>
-                Generate Image Prompt
-              </Button>
-              <Button onClick={handleGenerateImages}>Generate Images</Button>
-              <Button onClick={handleSaveFinalResult}>Save Final Result</Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Button onClick={handleRunAll}>Run All Steps</Button>
-              <Button variant="destructive" onClick={handleResetStates}>
-                Reset States
-              </Button>
-            </div>
+            )}
           </div>
-        </ResizablePanel>
-        <ResizableHandle className="bg-slate-300" />
-        <ResizablePanel
-          defaultSize={75}
-          maxSize={75}
-          className="p-4 flex flex-col gap-4"
-        >
-          <h2>Debug Panel</h2>
-          <div className="mt-4 space-y-2 text-sm">
-            <pre>Keyword: {mainkeyword}</pre>
-            <pre>Persona Service Name: {personaServiceName}</pre>
-            <pre>Service Type: {serviceType}</pre>
-            <pre>Service Advantages: {serviceAdvantages}</pre>
-            <pre>Service Analysis: {JSON.stringify(serviceAnalysis)}</pre>
-            <pre>Title: {title}</pre>
-            <pre>TOC: {toc}</pre>
-            <pre>Intro: {intro}</pre>
-            <pre>Body: {body}</pre>
-            <pre>Conclusion: {conclusion}</pre>
-            <pre>Updated Content: {updatedContent}</pre>
-            <pre>Image Prompts: {imagePrompts.map((prompt)=> `${prompt.id} : ${prompt.prompt}\n`).join("")}</pre>
-            <pre>Images: {images.map((image)=> `${image.id} : ${image.imageUrl}\n`).join("")}</pre>
-          </div>
-          <div className="mt-4">
-            <h3>Execution Logs:</h3>
-            <div className="text-sm">
-              {debugLogs.map((log, index) => (
-                <div key={index}>{log}</div>
-              ))}
+
+          {/* (3) 진행도 표시 */}
+          {progress > 0 && (
+            <div className="px-4">
+              <ProgressBar progress={progress} message={progressMessage} />
             </div>
+          )}
+
+          {/* (4) 생성된 텍스트 / 이미지 미리보기 영역 */}
+          <div className="flex-1 bg-white rounded-md p-4">
+            {/* (4-1) updatedContent가 없을 때: intro/body/conclusion + "복사하기" 버튼 */}
+            {!isUpdatedContentExist && isContentGenerated && (
+              <div className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  <h3 className="font-bold mb-2 flex items-center">
+                    📑 생성된 콘텐츠
+                    <div className="flex-1" />
+                    <Button
+                      className="ml-auto"
+                      onClick={handleCopyIntroBodyConclusion}
+                    >
+                      📋 복사하기
+                    </Button>
+                    {/* ▼ 추가: 다운로드 드롭다운 */}
+                    <div className="relative inline-block">
+                      <Button
+                        variant="outline"
+                        className="ml-2"
+                        onClick={toggleDropdown}
+                      >
+                        다운로드 ▼
+                      </Button>
+                      {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              // intro+body+conclusion 전체 저장
+                              const combinedText = [
+                                intro,
+                                body,
+                                conclusion,
+                              ]
+                                .filter((t) => t.trim().length > 0)
+                                .join("\n\n");
+                              if (!combinedText) {
+                                alert("⚠️ 저장할 내용이 없습니다.");
+                                return;
+                              }
+                              const blob = new Blob([combinedText], {
+                                type: "text/plain;charset=utf-8",
+                              });
+                              saveAs(blob, "content.txt");
+                            }}
+                          >
+                            텍스트(txt)
+                          </button>
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadImagesZip();
+                            }}
+                          >
+                            이미지(zip)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </h3>
+                </div>
+                <div className="font-bold whitespace-pre-wrap break-words">
+                  📝 키워드: {mainkeyword}
+                </div>
+                <div className="font-bold whitespace-pre-wrap break-words">
+                  🏷️ 제목: {title}
+                </div>
+                <div className="font-bold whitespace-pre-wrap break-words">
+                  📚 목차: {toc}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(intro)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(body)}
+                </div>
+                <div className="whitespace-pre-wrap break-words">
+                  {renderWithLineBreaks(conclusion)}
+                </div>
+              </div>
+            )}
+
+            {/* (4-2) 최종 콘텐츠 (updatedContent) 렌더링 + "텍스트+이미지 복사" 버튼 */}
+            {isUpdatedContentExist && (
+              <div className="whitespace-pre-wrap break-words mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold">최종 콘텐츠:</span>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={handleCopyUpdatedContentWithImages}>
+                      📋 복사하기
+                    </Button>
+                    {/* ▼ 추가: 다운로드 드롭다운 */}
+                    <div className="relative inline-block">
+                      <Button variant="outline" onClick={toggleDropdown}>
+                        다운로드 ▼
+                      </Button>
+                      {isDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow z-10">
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadTxt();
+                            }}
+                          >
+                            텍스트(txt)
+                          </button>
+                          <button
+                            className="block w-full text-left px-2 py-1 hover:bg-gray-100"
+                            onClick={() => {
+                              toggleDropdown();
+                              handleDownloadImagesZip();
+                            }}
+                          >
+                            이미지(zip)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {renderUpdatedContent()}
+              </div>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
