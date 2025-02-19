@@ -28,6 +28,7 @@ import { saveFinalResult } from "@/features/post-generation/actions/others/save_
 import { AnalysisResults, FinalResult,BrnadContent, BizValueSegment } from "@/features/post-generation/types";
 import { saveFeedback } from "@/features/post-generation/actions/others/saveFeedback";
 import { analyzeProfile } from "../../actions/others/analyzeProfile";
+import { set } from "date-fns";
 
 export function BrandPanel() {
   // -------------------------------------------------
@@ -73,6 +74,7 @@ export function BrandPanel() {
   const [topic, setTopic] = useState("");
   const [serviceName, setServiceName] = useState("");
   const [serviceValues, setServiceValues] = useState<string[]>([]);
+  const [analysis, setAnalysis] = useState<AnalysisResults[]>([]);
 
   // -------------------------------------
   // C) 결과 상태
@@ -289,10 +291,12 @@ export function BrandPanel() {
   async function handleGenerateIntro(
 
     currentTitle: string,
-    currentToc: string
+    currentToc: string,
+    brandContent?: BrnadContent,
+    analysis?: AnalysisResults[]
   ) {
     updateLog("서론 생성 중...");
-    const result = await generateIntro(mainkeyword, currentTitle, currentToc);
+    const result = await generateIntro(mainkeyword, currentTitle, currentToc, brandContent, analysis);
     setIntro(result.intro);
     updateLog("서론 생성 완료");
     return result.intro;
@@ -302,10 +306,12 @@ export function BrandPanel() {
 
     currentTitle: string,
     currentToc: string,
-    currentIntro: string
+    currentIntro: string,
+    brandContent?: BrnadContent,
+    analysis?: AnalysisResults[]  
   ) {
     updateLog("본론 생성 중...");
-    const result = await generateBody(mainkeyword, currentTitle, currentToc, currentIntro);
+    const result = await generateBody(mainkeyword, currentTitle, currentToc, currentIntro, brandContent, analysis); 
     setBody(result.body);
     updateLog("본론 생성 완료");
     return result.body;
@@ -316,10 +322,12 @@ export function BrandPanel() {
     currentTitle: string,
     currentToc: string,
     currentIntro: string,
-    currentBody: string
+    currentBody: string,
+    brandContent?: BrnadContent,
+    analysis?: AnalysisResults[]
   ) {
     updateLog("결론 생성 중...");
-    const result = await generateConclusion(mainkeyword, currentTitle, currentToc, currentIntro, currentBody);
+    const result = await generateConclusion(mainkeyword, currentTitle, currentToc, currentIntro, currentBody, brandContent, analysis);
     setConclusion(result.conclusion);
     updateLog("결론 생성 완료");
     return result.conclusion;
@@ -404,9 +412,11 @@ export function BrandPanel() {
         setProgress(10);
         setProgressMessage("컨텐츠 초기화 중...");
         const profileAnalysisResult = await handleProfileAnalysis();
+        const analysis = profileAnalysisResult
+        setAnalysis(analysis);
         setProgress(30);
         setProgressMessage("목차 생성 중...");
-        const tocResult = await handleGenerateToc(title, profileAnalysisResult);
+        const tocResult = await handleGenerateToc(title, analysis);
         // 응답이 배열이면 그대로 사용
         if (Array.isArray(tocResult)) {
           setTocItems(tocResult);
@@ -428,10 +438,10 @@ export function BrandPanel() {
         setProgressMessage("서론 생성 중...");
         const newTocString = assembleTocFromItems(tocItems);
         setToc(newTocString);
-        const introResult = await handleGenerateIntro( title, newTocString);
+        const introResult = await handleGenerateIntro( title, newTocString, brandContent, analysis);
         setProgress(40);
         setProgressMessage("본론 생성 중...");
-        const bodyResult = await handleGenerateBody( title, newTocString, introResult);
+        const bodyResult = await handleGenerateBody( title, newTocString, introResult,brandContent, analysis);
         setProgress(70);
         setProgressMessage("결론 생성 중...");
         const conclusionResult = await handleGenerateConclusion(title, newTocString, introResult, bodyResult);
