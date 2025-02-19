@@ -71,11 +71,7 @@ export function TrafficPanel() {
   // ===================
   // 2) 결과 상태
   // ===================
-  const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
-    industry_analysis: null,
-    advantage_analysis: null,
-    target_needs: null,
-  });
+
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [title, setTitle] = useState("");
   const [toc, setToc] = useState("");
@@ -311,7 +307,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleInitializeContent = async (): Promise<{
-    serviceanalysis: Analysis | null;
     subkeywordlist: string[] | null;
   }> => {
     updateLog("초기화 중...");
@@ -325,10 +320,7 @@ function postProcessUpdatedContent(rawContent: string): string {
         }
       : undefined;
 
-    const result = await initializeContent(mainkeyword, personaData);
-    if (result.serviceanalysis) {
-      setServiceAnalysis(result.serviceanalysis);
-    }
+    const result = await initializeContent(mainkeyword);
     if (
       result.subkeywordlist.relatedTerms &&
       result.subkeywordlist.relatedTerms.length > 0
@@ -344,7 +336,6 @@ function postProcessUpdatedContent(rawContent: string): string {
     }
     updateLog("콘텐츠 초기화 완료");
     return {
-      serviceanalysis: result.serviceanalysis || null,
       subkeywordlist:
         result.subkeywordlist.relatedTerms ||
         result.subkeywordlist.autocompleteTerms ||
@@ -353,7 +344,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleGenerateToc = async (
-    serviceanalysis: Analysis | null,
     currentTitle: string
   ): Promise<string> => {
     updateLog("목차 생성 중...");
@@ -364,7 +354,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleGenerateIntro = async (
-    serviceanalysis: Analysis | null,
     currentTitle: string,
     currentToc: string
   ): Promise<string> => {
@@ -376,7 +365,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleGenerateBody = async (
-    serviceanalysis: Analysis | null,
     currentTitle: string,
     currentToc: string,
     currentIntro: string
@@ -394,7 +382,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleGenerateConclusion = async (
-    serviceanalysis: Analysis | null,
     currentTitle: string,
     currentToc: string,
     currentIntro: string,
@@ -414,7 +401,6 @@ function postProcessUpdatedContent(rawContent: string): string {
   };
 
   const handleGenerateImagePrompt = async (
-    serviceanalysis: Analysis | null,
     currentContent: {
       title: string;
       toc: string[];
@@ -500,7 +486,6 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgress(30);
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(
-        initResult.serviceanalysis,
         title
       );
       console.log("title", title);
@@ -508,7 +493,6 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgress(50);
       setProgressMessage("서론 생성 중...");
       const introResult = await handleGenerateIntro(
-        initResult.serviceanalysis,
         title,
         tocResult
       );
@@ -517,7 +501,6 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgress(70);
       setProgressMessage("본론 생성 중...");
       const bodyResult = await handleGenerateBody(
-        initResult.serviceanalysis,
         title,
         tocResult,
         introResult
@@ -526,7 +509,6 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgress(90);
       setProgressMessage("결론 생성 중...");
       const conclusionResult = await handleGenerateConclusion(
-        initResult.serviceanalysis,
         title,
         tocResult,
         introResult,
@@ -562,7 +544,6 @@ function postProcessUpdatedContent(rawContent: string): string {
         conclusion,
       };
       const imagePromptResult = await handleGenerateImagePrompt(
-        serviceAnalysis,
         currentContent
       );
 
@@ -576,12 +557,6 @@ function postProcessUpdatedContent(rawContent: string): string {
       setProgressMessage("최종 결과 저장 중...");
       const finalResult: FinalResult = {
         mainKeyword: mainkeyword,
-        persona: {
-          service_industry: serviceType,
-          service_name: personaServiceName,
-          service_advantage: serviceAdvantages,
-        },
-        service_analysis: serviceAnalysis,
         title,
         toc,
         content: {

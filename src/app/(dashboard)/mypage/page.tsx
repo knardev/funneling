@@ -1,6 +1,6 @@
 "use client";
 
-import { Mypage } from "@/features/post-generation/components/mypage";
+import { Profile } from "@/features/post-generation/components/profile-panel";
 
 export default function Page() {
   return (
@@ -12,7 +12,7 @@ export default function Page() {
 
       {/* 전체 페이지 스크롤 가능 */}
       <div className="flex-1">
-        <Mypage />
+        <Profile />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { ApiResponse } from "../../types";
 
 
 const CLAUDE_CONFIG = {
@@ -13,7 +14,7 @@ const CLAUDE_CONFIG = {
   export async function makeClaudeRequest<T>(
     prompt: string,
     system: string,
-    responseTransformer?: (response: string) => T,
+    responseTransformer?: (response: ApiResponse) => T,
     maxRetries: number = 3,
     initialDelay: number = 1000
 ): Promise<T> {
@@ -68,7 +69,7 @@ const CLAUDE_CONFIG = {
             }
 
             const content = result.content[0].text;
-            const parsedContent = tryParseJson(content);
+            const parsedContent = JSON.parse(content);
 
             if (responseTransformer) {
                 return responseTransformer(parsedContent);

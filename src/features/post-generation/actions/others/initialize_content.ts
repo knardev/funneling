@@ -1,15 +1,13 @@
 "use server";
 
 import {naverUtils} from "../../utils/naver/naver";
-import { Analysis, Persona,subkeywordlist } from "../../types";
+import { subkeywordlist } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
-import { initialContentPrompt } from "../../prompts/initialcontentPrompt";
+import { initialContentPrompt } from "../../prompts/others/initialcontentPrompt";
 
 export async function initializeContent(
     keyword: string,
-    persona?: Persona
   ):Promise<{
-    serviceanalysis?: Analysis;
     subkeywordlist: subkeywordlist;
   }>
 {
@@ -20,10 +18,6 @@ export async function initializeContent(
   const subkeywordlist= await getSearchData(keyword);
   const response = { subkeywordlist};
   
-  if(persona){
-    const serviceanalysis = await analyzeService(persona);
-    return {subkeywordlist, serviceanalysis};
-  }
 
   console.log("initializeContent 응답 데이터", JSON.stringify(response));
   return response;
@@ -133,29 +127,29 @@ const removeHTMLTags = (text: string) => {
 };
 
 
-async function analyzeService(persona: Persona): Promise<Analysis> {
-  try {
-    const response = await makeClaudeRequest<Analysis>(
-      initialContentPrompt.generatePrompt(
-        persona.service_name,
-        persona.service_industry,
-        persona.service_advantage
-      ),
-      initialContentPrompt.system,
-    );
+// async function analyzeService(persona: Persona): Promise<Analysis> {
+//   try {
+//     const response = await makeClaudeRequest<Analysis>(
+//       initialContentPrompt.generatePrompt(
+//         persona.service_name,
+//         persona.service_industry,
+//         persona.service_advantage
+//       ),
+//       initialContentPrompt.system,
+//     );
 
-    console.log('Raw response from makeClaudeRequest:', response);
+//     console.log('Raw response from makeClaudeRequest:', response);
 
-    return {
-      industry_analysis: mergeArrays(response.industry_analysis),
-      advantage_analysis: mergeArrays(response.advantage_analysis),
-      target_needs: mergeArrays(response.target_needs)
-    };
-  } catch (error) {
-    console.error('Error in analyzeService:', error);
-    throw error;
-  }
-}
+//     return {
+//       industry_analysis: mergeArrays(response.industry_analysis),
+//       advantage_analysis: mergeArrays(response.advantage_analysis),
+//       target_needs: mergeArrays(response.target_needs)
+//     };
+//   } catch (error) {
+//     console.error('Error in analyzeService:', error);
+//     throw error;
+//   }
+// }
 
 function mergeArrays(section: string | null): string {
   if (!section || typeof section !== 'object') {

@@ -1,4 +1,4 @@
-import { BrandPanel } from "@/features/post-generation/components/brand-panel";
+import { BrandPanel } from "@/features/post-generation/components/brandcontent/BrandPanel";
 
 export default function Page() {
   return (

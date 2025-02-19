@@ -3,17 +3,16 @@ export interface KeywordObj {
     subkeywords: string[];
   }
   
-  export interface Persona {
-    service_name: string;
-    service_industry: string;
-    service_advantage: string;
+export interface Profile {
+    bizName: string;
+    bizValue: string;
   }
-
-  export interface Analysis {
-    industry_analysis: string | null;
-    advantage_analysis: string | null;
-    target_needs: string | null;
+  export interface AnalysisResults {
+    needs: string[];
+    priority: number;
+    matchingServiceValue: string[];
   }
+  
 
 export interface Content {
     intro: string;
@@ -26,7 +25,21 @@ export interface ApiResponse {
   apiResponse: string;
 }
 
+export interface BizValueSegment {
+  order: number; // 입력 순서 (번호)
+  value: string; // 사용자가 입력한 업장 가치
+}
 
+export interface ProfileType {
+  id: string;
+  name: string;
+  bizValues: BizValueSegment[]; // 불렛 형태로 입력받은 업장 가치 목록
+}
+export interface BrnadContent {
+  topic: string;
+  serviceName: string;
+  serviceValues: string[];
+}
 
 export interface TitleResponse {
 
@@ -68,7 +81,11 @@ export interface PredictionResponse {
     message: string;
   };
 }
-
+export interface Analysis{
+  needs:[];
+  priority:number;
+  matchingServiceValue:[];
+}
 // src/types.ts
 
 export interface VertexAIImageResponse {
@@ -88,8 +105,6 @@ export interface GeneratedImage {
 
 export interface FinalResult {
   mainKeyword: string;
-  persona: Persona;
-  service_analysis: Analysis;
   title: string;
   toc: string;
   content: Content;
@@ -152,5 +167,9 @@ export interface subkeywordlist{
 
 export type ScrapingResults = ScrapingResult[];
 
+export interface ProgressBarProps {
+    progress: number;
+    message: string;
+  }
 
 export * from './types';

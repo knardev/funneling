@@ -23,11 +23,6 @@ export function TitlePanel() {
   // Input states
   const [mainkeyword, setMainKeyword] = useState("");
   const [subkeywords, setSubKeywords] = useState<string[]>([]);
-  const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
-    industry_analysis: null,
-    advantage_analysis: null,
-    target_needs: null,
-  });
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
   const [isResultReady, setIsResultReady] = useState(false);
 
@@ -150,7 +145,6 @@ export function TitlePanel() {
           initResult.subkeywordlist.autocompleteTerms ||
           [],
         groupedResults,
-        initResult.serviceanalysis
       );
 
       setStrictTitles(generateResult.optimizedTitles.strict_structure || []);

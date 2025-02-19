@@ -1,6 +1,6 @@
 "use server";
 
-import { Analysis } from "../../types";
+import { Analysis, AnalysisResults, BrnadContent } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 import { introPrompt } from "../../prompts/contentPrompt/introPrompt";
 
@@ -8,21 +8,25 @@ export async function generateIntro(
   mainkeyword: string,
   title: string,
   toc: string,
-  analysis?: Analysis
+  brandContent?: BrnadContent,
+  analysis?: AnalysisResults[]
 ) {
-  // introPrompt.generatePrompt의 실행 결과 저장
-  const generatedPrompt = introPrompt.generatePrompt(
+  // 프롬프트 생성
+  const generatedPromptRaw = introPrompt.generatePrompt(
     mainkeyword,
     title,
     toc,
+    brandContent,
     analysis
   );
-
+  
+  // 이스케이프 처리: 실제 개행(\n)과 탭(\t)이 JSON 내에서 안전하게 표현되도록 변환
+  const generatedPrompt = generatedPromptRaw.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 
   const response = await makeClaudeRequest<{
     optimized_intro: string;
   }>(
-    generatedPrompt, // 여기서 사용
+    generatedPrompt, // 이스케이프 처리된 프롬프트 사용
     introPrompt.system
   );
 
@@ -30,7 +34,5 @@ export async function generateIntro(
 
   const intro = response.optimized_intro;
 
-  return {
-    intro: intro,
-  };
+  return { intro };
 }
