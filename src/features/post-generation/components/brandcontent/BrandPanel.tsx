@@ -276,17 +276,26 @@ export function BrandPanel() {
   async function handleGenerateToc(currentTitle: string, analysis?: AnalysisResults[]) {
     updateLog("목차 생성 중...");
     const result = await generateToc(mainkeyword, currentTitle, brandContent, analysis);
-    // 응답이 배열이면 그대로 사용
+  
+    // result.toc이 정의되어 있지 않은 경우 에러 로그 출력 및 기본값 할당
+    if (!result.toc) {
+      updateLog("Error: toc 값이 undefined입니다. API 응답을 확인하세요.");
+      setTocItems([]);
+      setToc("");
+      return "";
+    }
+  
     if (Array.isArray(result.toc)) {
       setTocItems(result.toc);
       setToc(result.toc.join("\n"));
-    } else {
+    } else if (typeof result.toc === "string") {
       setTocItems(result.toc.split("\n"));
       setToc(result.toc);
     }
     updateLog("목차 생성 완료");
     return result.toc;
   }
+  
 
   async function handleGenerateIntro(
 
@@ -418,13 +427,13 @@ export function BrandPanel() {
         setProgressMessage("목차 생성 중...");
         const tocResult = await handleGenerateToc(title, analysis);
         // 응답이 배열이면 그대로 사용
-        if (Array.isArray(tocResult)) {
-          setTocItems(tocResult);
-          setToc(tocResult.join("\n"));
-        } else {
-          setTocItems(parseTocToItems(tocResult));
-          setToc(tocResult);
-        }
+        // if (Array.isArray(tocResult)) {
+        //   setTocItems(tocResult);
+        //   setToc(tocResult.join("\n"));
+        // } else {
+        //   setTocItems(parseTocToItems(tocResult));
+        //   setToc(tocResult);
+        // }
         setProgress(100);
         setProgressMessage("목차 생성 완료! 수정해보세요.");
         setGenerationStep(1);
