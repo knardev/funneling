@@ -5,7 +5,8 @@ const OPENAI_CONFIG = {
     URL: "https://api.openai.com/v1/chat/completions",
     KEY: process.env.OPENAI_API_KEY,
     MODEL: "gpt-4o",
-    MAX_TOKENS: 6000
+    MAX_TOKENS: 6000,
+    temperature: 0.7,
   }
 };
 
@@ -43,7 +44,8 @@ export async function makeOpenAiRequest<T>(
     const response = await fetch(OPENAI_CONFIG.API.URL, {
       method: 'POST',
       headers: headers as Record<string, string>,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      cache: 'no-cache',
     });
 
     if (!response.ok) {

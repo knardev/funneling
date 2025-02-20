@@ -1,3 +1,5 @@
+// ../../features/post-generation/actions/content/generate_toc.ts
+
 "use server";
 
 import { tocPrompt } from "../../prompts/contentPrompt/tocPrompt";

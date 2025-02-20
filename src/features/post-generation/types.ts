@@ -59,6 +59,13 @@ export interface TitleResponse {
 
 }
 
+export interface TitleResult{
+    keyword: string;
+    strict_structure: string[];
+    creative_structure: string[];
+    style_patterns: string[];
+}
+
 export interface ImportanceTitles  {
   high: string[];
   middle: string[];
