@@ -14,6 +14,37 @@ export interface Profile {
   }
   
 
+  export interface BrandPanelInputProps {
+    // 프로필 관련
+    profiles: { id: string; name: string; bizValues: BizValueSegment[] }[];
+    selectedProfileId: string;
+    handleSelectProfile: (id: string) => void;
+    // 입력 상태
+    mainkeyword: string;
+    setMainKeyword: (value: string) => void;
+    title: string;
+    setTitle: (value: string) => void;
+    topic: string;
+    setTopic: (value: string) => void;
+    serviceName: string;
+    setServiceName: (value: string) => void;
+    serviceValues: string[];
+    setServiceValues: (value: string[]) => void;
+    // 진행도 / 상태
+    progress: number;
+    progressMessage: string;
+    isContentGenerated: boolean;
+    isUpdatedContentExist: boolean;
+    // 새로 추가: generationStep와 toc (수정된 목차)
+    generationStep: number;
+    toc: string;
+    // 핸들러
+    handleGenerateContent: () => void;
+    handleGenerateImagePromptAndImages: () => void;
+  }
+
+export type ToneType = `정중체` | `음슴체`;
+
 export interface Content {
     intro: string;
     body: string;

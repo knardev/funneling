@@ -1,5 +1,5 @@
 "use server";
-import {  AnalysisResults, BrnadContent } from "../../types";
+import {  AnalysisResults, BrnadContent, ToneType } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 import { bodyPrompt } from "../../prompts/contentPrompt/bodyPrompt";
 
@@ -9,7 +9,7 @@ export async function generateBody(
   title: string,
   toc: string,
   intro: string,
-  tone: string,
+  tone: ToneType,
   brandcontent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {

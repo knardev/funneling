@@ -181,12 +181,24 @@ export function BrandPanel() {
     }
   }
 
-  async function handleCopyUpdatedContentWithImages() {
+  const handleCopyUpdatedContentWithImages = async () => {
     try {
       if (!updatedContent) {
         alert("⚠️ 복사할 콘텐츠가 없습니다.");
         return;
       }
+  
+      let plainTextContent = updatedContent.replace(/\\n/g, "\n");
+      plainTextContent = plainTextContent
+        .split("\n")
+        .map((line) =>
+          line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const imageObj = imagesById[number];
+            return imageObj ? `[이미지 ${number} 포함]` : match;
+          })
+        )
+        .join("\n"); // HTML 대신 개행 문자 유지
+  
       let htmlContent = updatedContent.replace(/\\n/g, "\n");
       htmlContent = htmlContent
         .split("\n")
@@ -199,15 +211,24 @@ export function BrandPanel() {
           })
         )
         .join("<br>");
+  
+      const textBlob = new Blob([plainTextContent], { type: "text/plain" });
       const htmlBlob = new Blob([htmlContent], { type: "text/html" });
-      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+  
+      const clipboardItem = new ClipboardItem({
+        "text/plain": textBlob, // 일반 텍스트 복사 (메모장에서 붙여넣기 가능)
+        "text/html": htmlBlob,  // HTML 복사 (웹에서 붙여넣기 가능)
+      });
+  
       await navigator.clipboard.write([clipboardItem]);
-      alert("✅ 텍스트+이미지가 복사되었습니다!");
+  
+      alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
     } catch (error) {
-      console.error("복사 실패:", error);
-      alert("❌ 복사 중 오류가 발생했습니다.");
+      console.error("❌ 복사 실패:", error);
+      alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
     }
-  }
+  };
+  
 
   // -------------------------------------
   // 다운로드 기능
@@ -593,6 +614,8 @@ export function BrandPanel() {
               handleGenerateImagePromptAndImages={handleGenerateImagePromptAndImages}
               generationStep={generationStep}
               toc={toc}
+              tone={tone}
+              setTone={setTone}
             />
             <BrandPanelOutput
               generationStep={generationStep}

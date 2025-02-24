@@ -1,6 +1,6 @@
 "use server";
 
-import { Analysis, AnalysisResults, BrnadContent } from "../../types";
+import { Analysis, AnalysisResults, BrnadContent, ToneType } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 import { conclusionPrompt } from "../../prompts/contentPrompt/conclusionprompt";
 // import { escapeControlCharacters } from "./generate_body";
@@ -11,7 +11,7 @@ export async function generateConclusion(
   toc: string,
   intro: string,
   body: string,
-  tone: string,
+  tone: ToneType,
   brandcontent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {

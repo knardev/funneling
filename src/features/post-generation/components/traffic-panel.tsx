@@ -25,7 +25,7 @@ import { generateConclusion } from "@/features/post-generation/actions/content/g
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 import { saveFinalResult } from "../actions/others/save_finalResult";
-import { Analysis, FinalResult } from "../types";
+import { Analysis, FinalResult, ToneType } from "../types";
 import { saveFeedback } from "../actions/others/saveFeedback";
 import { SidePanel } from "./side-panel";
 
@@ -214,6 +214,18 @@ export function TrafficPanel() {
         alert("⚠️ 복사할 콘텐츠가 없습니다.");
         return;
       }
+  
+      let plainTextContent = updatedContent.replace(/\\n/g, "\n");
+      plainTextContent = plainTextContent
+        .split("\n")
+        .map((line) =>
+          line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const imageObj = imagesById[number];
+            return imageObj ? `[이미지 ${number} 포함]` : match;
+          })
+        )
+        .join("\n"); // HTML 대신 개행 문자 유지
+  
       let htmlContent = updatedContent.replace(/\\n/g, "\n");
       htmlContent = htmlContent
         .split("\n")
@@ -226,18 +238,24 @@ export function TrafficPanel() {
           })
         )
         .join("<br>");
-
+  
+      const textBlob = new Blob([plainTextContent], { type: "text/plain" });
       const htmlBlob = new Blob([htmlContent], { type: "text/html" });
-      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+  
+      const clipboardItem = new ClipboardItem({
+        "text/plain": textBlob, // 일반 텍스트 복사 (메모장에서 붙여넣기 가능)
+        "text/html": htmlBlob,  // HTML 복사 (웹에서 붙여넣기 가능)
+      });
+  
       await navigator.clipboard.write([clipboardItem]);
-
+  
       alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
     } catch (error) {
       console.error("❌ 복사 실패:", error);
       alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
     }
   };
-
+  
   // =========================
   // [추가] 다운로드 관련 함수
   // =========================
@@ -354,7 +372,7 @@ export function TrafficPanel() {
   const handleGenerateToc = async (
     mainkeyword: string,
     title: string,
-    tone: '정중체' | '음슴체',
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("목차 생성 중...");
     const result = await generateToc(mainkeyword, title, tone || undefined);
@@ -367,7 +385,7 @@ export function TrafficPanel() {
     mainkeyword: string,
     title: string,
     toc: string,
-    tone: '정중체' | '음슴체',
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("서론 생성 중...");
     const result = await generateIntro(mainkeyword, title, toc, tone);
@@ -381,7 +399,7 @@ export function TrafficPanel() {
     title: string,
     toc: string,
     intro: string,
-    tone: '정중체' | '음슴체',
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("본론 생성 중...");
     const result = await generateBody(
@@ -402,7 +420,7 @@ export function TrafficPanel() {
     toc: string,
     intro: string,
     body: string,
-    tone: '정중체' | '음슴체',
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("결론 생성 중...");
     const result = await generateConclusion(
@@ -503,8 +521,8 @@ export function TrafficPanel() {
     try {
       updateLog("🔄 콘텐츠 생성 시작...");
       setProgress(10);
-      setProgressMessage("컨텐츠 초기화 중...");
-      const initResult = await handleInitializeContent();
+      // setProgressMessage("컨텐츠 초기화 중...");
+      // const initResult = await handleInitializeContent();
 
       setProgress(30);
       setProgressMessage("목차 생성 중...");

@@ -127,7 +127,6 @@ export async function makeClaudeRequest<T>(
 
       // 응답을 text로 받아 원본 텍스트를 로그에 출력
       const rawResponseText = await response.text();
-      console.log("Claude Raw Response:", rawResponseText);
 
       let parsedContent: any;
       try {

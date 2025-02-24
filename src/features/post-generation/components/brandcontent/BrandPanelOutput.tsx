@@ -147,9 +147,9 @@ export function BrandPanelOutput({
             <div className="font-bold whitespace-pre-wrap break-words">
               📚 최종 목차: {toc}
             </div>
-            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(intro)}</div>
-            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(body)}</div>
-            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(conclusion)}</div>
+            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(intro || "")}</div>
+            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(body || "")}</div>
+            <div className="whitespace-pre-wrap break-words">{renderWithLineBreaks(conclusion || "")}</div>
           </div>
         )}
 
