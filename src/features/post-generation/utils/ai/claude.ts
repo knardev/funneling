@@ -23,48 +23,53 @@ function repairUnescapedQuotes(str: string): string {
   });
 }
 
-/**
- * 주어진 문자열을 JSON.parse 시도하고, 실패하면
- * trailing comma, 미이스케이프된 큰따옴표 등 흔한 오류를 보정해서 다시 파싱하는 헬퍼 함수.
- */
-function tryParseJson(str: string): any {
+function tryParseJson<T>(str: string): T | null {
   try {
-    return JSON.parse(str);
+    return JSON.parse(str) as T;
   } catch (e) {
     // trailing comma 등 간단한 오류 보정
-    let repaired = str
-      .replace(/,\s*}/g, "}")
-      .replace(/,\s*]/g, "]");
-    // 미이스케이프된 큰따옴표 보정 추가
-    repaired = repairUnescapedQuotes(repaired);
-    return JSON.parse(repaired);
+    const repaired = repairUnescapedQuotes(
+      str.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]")
+    );
+    
+    try {
+      return JSON.parse(repaired) as T;
+    } catch (e2) {
+      console.error("JSON 파싱 실패:", e2);
+      return null;
+    }
   }
 }
 
 /**
  * 응답 텍스트에서 유효한 JSON 부분을 추출하여 파싱하는 fallback 함수.
  */
-function extractJsonFromResponse(text: string): any {
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
+function extractJsonFromResponse<T>(text: string): T | null {
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  
   if (firstBrace === -1 || lastBrace === -1) {
-    console.error('유효한 JSON 블록을 찾을 수 없습니다. 원본 텍스트:', text);
-    throw new Error('유효한 JSON 블록을 찾을 수 없습니다.');
+    console.error("유효한 JSON 블록을 찾을 수 없습니다. 원본 텍스트:", text);
+    return null;
   }
+  
   const jsonString = text.substring(firstBrace, lastBrace + 1);
+  
   try {
-    return JSON.parse(jsonString);
+    return JSON.parse(jsonString) as T;
   } catch (e) {
     const sanitized = sanitizeJsonString(jsonString);
+    
     try {
-      return JSON.parse(sanitized);
+      return JSON.parse(sanitized) as T;
     } catch (e2) {
-      console.error('JSON 파싱 실패:', e2);
-      console.log('원본 JSON 문자열:', jsonString);
-      throw new Error('JSON 응답 파싱 실패');
+      console.error("JSON 파싱 실패:", e2);
+      console.log("원본 JSON 문자열:", jsonString);
+      return null;
     }
   }
 }
+
 
 function sanitizeJsonString(str: string): string {
   return str
@@ -128,32 +133,33 @@ export async function makeClaudeRequest<T>(
       // 응답을 text로 받아 원본 텍스트를 로그에 출력
       const rawResponseText = await response.text();
 
-      let parsedContent: any;
-      try {
-        const rawJson = JSON.parse(rawResponseText);
-        if (
-          rawJson &&
-          Array.isArray(rawJson.content) &&
-          rawJson.content.length > 0 &&
-          typeof rawJson.content[0].text === "string"
-        ) {
-          const innerText = rawJson.content[0].text;
-          try {
-            parsedContent = tryParseJson(innerText);
-          } catch (e) {
-            console.error("내부 JSON 파싱 오류:", e);
-            // 파싱에 실패하면 innerText를 그대로 반환하지 않고, fallback 처리
-            parsedContent = extractJsonFromResponse(rawResponseText);
-          }
-        } else {
-          parsedContent = extractJsonFromResponse(rawResponseText);
+      const parsedContent = (() => {
+        try {
+          const rawJson = JSON.parse(rawResponseText);
+          if (
+        rawJson &&
+        Array.isArray(rawJson.content) &&
+        rawJson.content.length > 0 &&
+        typeof rawJson.content[0].text === "string"
+          ) {
+        const innerText = rawJson.content[0].text;
+        try {
+          return tryParseJson(innerText);
+        } catch (e) {
+          console.error("내부 JSON 파싱 오류:", e);
+          // 파싱에 실패하면 innerText를 그대로 반환하지 않고, fallback 처리
+          return extractJsonFromResponse(rawResponseText);
         }
-      } catch (e) {
-        parsedContent = extractJsonFromResponse(rawResponseText);
-      }
+          } else {
+        return extractJsonFromResponse(rawResponseText);
+          }
+        } catch (e) {
+          return extractJsonFromResponse(rawResponseText);
+        }
+      })();
 
       if (responseTransformer) {
-        return responseTransformer(parsedContent);
+        return responseTransformer(parsedContent as ApiResponse);
       }
       return parsedContent as T;
     } catch (error) {

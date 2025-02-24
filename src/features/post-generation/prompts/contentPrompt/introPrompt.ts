@@ -68,7 +68,7 @@ export const introPrompt = {
       질문형:
       - "여러분은 어떤 제품 사용하시나요?"
       - "오늘 저녁 뭐 먹을지 고민되시나요?"
-      - "같이 방문해보시겠어요?"
+      - "같이 방문해보실래요?"
       
       공감 유도:
       - "다들 이런 경험 있으시죠?"
@@ -179,10 +179,11 @@ export const introPrompt = {
       },
       "optimized_intro": ""
     } 	
-      `,},
-      templates: {
-  // 템플릿 1: analysis가 없는 기본 상황
-  template1: `
+      `,
+  },
+  templates: {
+    // 템플릿 1: analysis가 없는 기본 상황
+    template1: `
           
     \n\nHuman:
     다음 제목과 목차를 분석하고, YES-SET 기법을 사용하여 독자의 관심을 확 끌 수 있는 서론을 작성해줘. 
@@ -238,10 +239,10 @@ export const introPrompt = {
         "yesSetQuestions": ["{질문1}", "{질문2}", "{질문3}"]
       },
       "optimized_intro": "{서론 내용}"
-  } 
-      `,
-  // 템플릿 2: analysis와 brandContent가 있는 경우 (주제, 서비스 가치, 분석결과 반영)
-  template2: `
+    } 
+    `,
+    // 템플릿 2: analysis와 brandContent가 있는 경우 (주제, 서비스 가치, 분석결과 반영)
+    template2: `
 \n\nHuman:
 다음 제목과 목차, 그리고 분석 데이터를 바탕으로 YES-SET 기법을 사용하여 독자의 관심을 확 끌 수 있는 서론을 작성해줘. 
 서론은 고객의 혼란과 고민을 공감하며, 브랜드의 전문성, 신뢰, 그리고 차별화된 강점을 반영하여 고객이 올바른 선택을 할 수 있도록 안내해야 합니다. 고객이 단순한 가격이나 평판 이상의 가치를 인식하도록, 브랜드의 서비스 가치를 명확하게 전달해 주시길 바랍니다. 작성은 음슴체와 정중체를 혼용하여 매력적으로 구성할 것.
@@ -295,8 +296,8 @@ export const introPrompt = {
   },
   "optimized_intro": "{서론 내용임}"
 }
-  `,
-},
+    `,
+  },
   generatePrompt: (
     mainKeyword: string,
     title: string,
@@ -305,26 +306,32 @@ export const introPrompt = {
     brandContent?: BrnadContent,
     analysis?: AnalysisResults[]
   ): { system: string; prompt: string } => {
-    
     const system = introPrompt.systems[tone];
     if (!system) {
       throw new Error("Tone is required.");
     }
 
-    let template = brandContent && analysis ? introPrompt.templates.template2 : introPrompt.templates.template1;
+    const template =
+      brandContent && analysis
+        ? introPrompt.templates.template2
+        : introPrompt.templates.template1;
 
-    let prompt = template
+    const baseReplaced = template
       .replace("{mainKeyword}", mainKeyword)
       .replace("{title}", title)
       .replace("{toc}", toc);
 
-    if (brandContent && analysis) {
-      prompt = prompt
-        .replace("{topic}", brandContent.topic)
-        .replace("{serviceName}", brandContent.serviceName)
-        .replace("{serviceValues}", brandContent.serviceValues.join(", "))
-        .replace("{serviceAnalysis}", JSON.stringify(analysis));
-    }
+    const prompt =
+      brandContent && analysis
+        ? baseReplaced
+            .replace("{topic}", brandContent.topic)
+            .replace("{serviceName}", brandContent.serviceName)
+            .replace(
+              "{serviceValues}",
+              brandContent.serviceValues.join(", ")
+            )
+            .replace("{serviceAnalysis}", JSON.stringify(analysis))
+        : baseReplaced;
 
     return { system, prompt };
   },
