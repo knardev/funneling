@@ -140,17 +140,20 @@ export function TrafficPanel() {
   // =========================================
   function postProcessUpdatedContent(rawContent: string): string {
     let content = rawContent;
-
-    // 1) 이미 "정확한" 형태인 #[imageN]는 임시 키로 대체
-    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@";
+  
+    // -------------------------------------
+    // 1) "정확한" 형태인 #[imageN]는 임시 키로 대체
+    // -------------------------------------
+    const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
     const correctPlaceholders: string[] = [];
-
     content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
       correctPlaceholders.push(match);
       return CORRECT_MARKER + (correctPlaceholders.length - 1);
     });
-
-    // 2) 잘못된 placeholder 교정
+  
+    // -------------------------------------
+    // 2) 잘못된 placeholder들 교정
+    // -------------------------------------
     content = content.replace(
       /#\s?\(?(\d+)\)?|\[image(\d+)\]|\[(\d+)\]/gi,
       (_, g1, g2, g3) => {
@@ -158,18 +161,27 @@ export function TrafficPanel() {
         return `#[image${imageNum}]`;
       }
     );
-
-    // 3) 임시 키로 대체해둔 placeholder 복원
+  
+    // -------------------------------------
+    // 3) 임시 키로 대체해둔 "정확한" placeholder 복원
+    // -------------------------------------
     content = content.replace(new RegExp(CORRECT_MARKER + "(\\d+)", "g"), (_, idx) => {
       return correctPlaceholders[parseInt(idx, 10)];
     });
-
-    // 4) `#[imageX]` 뒤에 { ... } 제거
+  
+    // -------------------------------------
+    // 4) `#[imageX]` 뒤에 { ... }가 붙어 있으면 제거
+    // -------------------------------------
     content = content.replace(/(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi, "$1");
-
+  
+    // -------------------------------------
+    // 5) http 등이 포함된 링크 텍스트 제거
+    // -------------------------------------
+    content = content.replace(/https?:\/\/[^\s]+/gi, '');
+  
     return content;
   }
-
+  
   // =========================================
   // 7) 복사 함수
   // =========================================
