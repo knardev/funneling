@@ -3,37 +3,40 @@
 "use server";
 
 import { tocPrompt } from "../../prompts/contentPrompt/tocPrompt";
-import { Analysis } from "../../types";
+import { AnalysisResults, BrnadContent } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
 
 export async function generateToc(
   mainkeyword: string,
   title: string,
-  tone: '정중체' | '음슴체', // 엄격한 타입 지정
-  analysis?: Analysis
-): Promise<{ toc: string }> {
-  console.log("Main Keyword:", mainkeyword);
-  console.log("Title:", title);
-  console.log("Tone:", tone);
+  tone: string,
+  brandContent?: BrnadContent,
+  analysis?: AnalysisResults[]
+) {
+  console.log("mainkeyword:", mainkeyword);
+  console.log("title:", title);
 
-  if (!tone) {
-    throw new Error("Tone is required.");
-  }
+  // 프롬프트 생성
+  const generatedPrompt = tocPrompt.generatePrompt(
+    mainkeyword,
+    title,
+    tone,
+    brandContent,
+    analysis
+  );
+  console.log("Generated Prompt:", generatedPrompt);
 
-  try {
-    const { system, prompt } = tocPrompt.generatePrompt(mainkeyword, title, tone, analysis);
-    const response = await makeClaudeRequest<{
-      toc: string
-    }>(
-      prompt,
-      system
-    );
+  // API 요청 전, 시스템 프롬프트도 출력 (필요한 경우)
+  console.log("System Prompt:", tocPrompt.system);
 
-    const toc = response.toc;
-    console.log("generateToc 응답 데이터:", response);
-    return { toc };
-  } catch (error) {
-    console.error("generateToc 오류:", error);
-    throw error;
-  }
+  const response = await makeClaudeRequest<{
+    toc: string;
+  }>(generatedPrompt, tocPrompt.system);
+
+  console.log("generateToc 응답 데이터:", response);
+
+  const toc = response.toc;
+  return {
+    toc: toc,
+  };
 }

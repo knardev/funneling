@@ -3,17 +3,47 @@ export interface KeywordObj {
     subkeywords: string[];
   }
   
-  export interface Persona {
-    service_name: string;
-    service_industry: string;
-    service_advantage: string;
+export interface Profile {
+    bizName: string;
+    bizValue: string;
+  }
+  export interface AnalysisResults {
+    needs: string[];
+    priority: number;
+    matchingServiceValue: string[];
+  }
+  
+
+  export interface BrandPanelInputProps {
+    // 프로필 관련
+    profiles: { id: string; name: string; bizValues: BizValueSegment[] }[];
+    selectedProfileId: string;
+    handleSelectProfile: (id: string) => void;
+    // 입력 상태
+    mainkeyword: string;
+    setMainKeyword: (value: string) => void;
+    title: string;
+    setTitle: (value: string) => void;
+    topic: string;
+    setTopic: (value: string) => void;
+    serviceName: string;
+    setServiceName: (value: string) => void;
+    serviceValues: string[];
+    setServiceValues: (value: string[]) => void;
+    // 진행도 / 상태
+    progress: number;
+    progressMessage: string;
+    isContentGenerated: boolean;
+    isUpdatedContentExist: boolean;
+    // 새로 추가: generationStep와 toc (수정된 목차)
+    generationStep: number;
+    toc: string;
+    // 핸들러
+    handleGenerateContent: () => void;
+    handleGenerateImagePromptAndImages: () => void;
   }
 
-  export interface Analysis {
-    industry_analysis: string | null;
-    advantage_analysis: string | null;
-    target_needs: string | null;
-  }
+export type ToneType = `정중체` | `음슴체`;
 
 export interface Content {
     intro: string;
@@ -26,7 +56,21 @@ export interface ApiResponse {
   apiResponse: string;
 }
 
+export interface BizValueSegment {
+  order: number; // 입력 순서 (번호)
+  value: string; // 사용자가 입력한 업장 가치
+}
 
+export interface ProfileType {
+  id: string;
+  name: string;
+  bizValues: BizValueSegment[]; // 불렛 형태로 입력받은 업장 가치 목록
+}
+export interface BrnadContent {
+  topic: string;
+  serviceName: string;
+  serviceValues: string[];
+}
 
 export interface TitleResponse {
 
@@ -75,7 +119,11 @@ export interface PredictionResponse {
     message: string;
   };
 }
-
+export interface Analysis{
+  needs:[];
+  priority:number;
+  matchingServiceValue:[];
+}
 // src/types.ts
 
 export interface VertexAIImageResponse {
@@ -95,8 +143,6 @@ export interface GeneratedImage {
 
 export interface FinalResult {
   mainKeyword: string;
-  persona: Persona;
-  service_analysis: Analysis;
   title: string;
   toc: string;
   content: Content;
@@ -159,5 +205,9 @@ export interface subkeywordlist{
 
 export type ScrapingResults = ScrapingResult[];
 
+export interface ProgressBarProps {
+    progress: number;
+    message: string;
+  }
 
 export * from './types';

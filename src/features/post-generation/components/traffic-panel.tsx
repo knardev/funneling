@@ -25,7 +25,7 @@ import { generateConclusion } from "@/features/post-generation/actions/content/g
 import { generateImagePrompt } from "@/features/post-generation/actions/image/generate_imagePrompt";
 import { generateImage } from "@/features/post-generation/actions/image/generate_image";
 import { saveFinalResult } from "../actions/others/save_finalResult";
-import { Analysis, FinalResult } from "../types";
+import { Analysis, FinalResult, ToneType } from "../types";
 import { saveFeedback } from "../actions/others/saveFeedback";
 import { SidePanel } from "./side-panel";
 import { set } from "date-fns";
@@ -79,11 +79,7 @@ export function TrafficPanel() {
   // ===================
   // 2) 결과 상태
   // ===================
-  const [serviceAnalysis, setServiceAnalysis] = useState<Analysis>({
-    industry_analysis: null,
-    advantage_analysis: null,
-    target_needs: null,
-  });
+
   const [subkeywordlist, setSubKeywordlist] = useState<string[] | null>(null);
 
   // (1) intro, body, conclusion을 빈 문자열로 초기화
@@ -199,6 +195,18 @@ export function TrafficPanel() {
         alert("⚠️ 복사할 콘텐츠가 없습니다.");
         return;
       }
+  
+      let plainTextContent = updatedContent.replace(/\\n/g, "\n");
+      plainTextContent = plainTextContent
+        .split("\n")
+        .map((line) =>
+          line.replace(/# ?\[(\d+)\]/g, (match, number) => {
+            const imageObj = imagesById[number];
+            return imageObj ? `[이미지 ${number} 포함]` : match;
+          })
+        )
+        .join("\n"); // HTML 대신 개행 문자 유지
+  
       let htmlContent = updatedContent.replace(/\\n/g, "\n");
       htmlContent = htmlContent
         .split("\n")
@@ -211,18 +219,24 @@ export function TrafficPanel() {
           })
         )
         .join("<br>");
-
+  
+      const textBlob = new Blob([plainTextContent], { type: "text/plain" });
       const htmlBlob = new Blob([htmlContent], { type: "text/html" });
-      const clipboardItem = new ClipboardItem({ "text/html": htmlBlob });
+  
+      const clipboardItem = new ClipboardItem({
+        "text/plain": textBlob, // 일반 텍스트 복사 (메모장에서 붙여넣기 가능)
+        "text/html": htmlBlob,  // HTML 복사 (웹에서 붙여넣기 가능)
+      });
+  
       await navigator.clipboard.write([clipboardItem]);
-
+  
       alert("✅ 텍스트와 이미지가 클립보드에 복사되었습니다!");
     } catch (error) {
       console.error("❌ 복사 실패:", error);
       alert("❌ 텍스트와 이미지 복사 중 오류가 발생했습니다.");
     }
   };
-
+  
   // =========================
   // [추가] 다운로드 관련 함수
   // =========================
@@ -285,7 +299,6 @@ export function TrafficPanel() {
   };
 
   const handleInitializeContent = async (): Promise<{
-    serviceanalysis: Analysis | null;
     subkeywordlist: string[] | null;
   }> => {
     updateLog("초기화 중...");
@@ -299,11 +312,11 @@ export function TrafficPanel() {
         }
       : undefined;
 
-    const result = await initializeContent(mainkeyword, personaData);
-    if (result.serviceanalysis) {
-      setServiceAnalysis(result.serviceanalysis);
-    }
-    if (result.subkeywordlist.relatedTerms && result.subkeywordlist.relatedTerms.length > 0) {
+    const result = await initializeContent(mainkeyword);
+    if (
+      result.subkeywordlist.relatedTerms &&
+      result.subkeywordlist.relatedTerms.length > 0
+    ) {
       setSubKeywordlist(result.subkeywordlist.relatedTerms);
     } else if (
       result.subkeywordlist.autocompleteTerms &&
@@ -315,7 +328,6 @@ export function TrafficPanel() {
     }
     updateLog("콘텐츠 초기화 완료");
     return {
-      serviceanalysis: result.serviceanalysis || null,
       subkeywordlist:
         result.subkeywordlist.relatedTerms || result.subkeywordlist.autocompleteTerms || [],
     };
@@ -324,11 +336,10 @@ export function TrafficPanel() {
   const handleGenerateToc = async (
     mainkeyword: string,
     title: string,
-    tone: "정중체" | "음슴체",
-    analysis: Analysis | null
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("목차 생성 중...");
-    const result = await generateToc(mainkeyword, title, tone, analysis || undefined);
+    const result = await generateToc(mainkeyword, title, tone || undefined);
     setToc(result.toc);
     updateLog("목차 생성 완료");
     return result.toc;
@@ -338,11 +349,10 @@ export function TrafficPanel() {
     mainkeyword: string,
     title: string,
     toc: string,
-    tone: "정중체" | "음슴체",
-    analysis: Analysis | null
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("서론 생성 중...");
-    const result = await generateIntro(mainkeyword, title, toc, tone, analysis || undefined);
+    const result = await generateIntro(mainkeyword, title, toc, tone);
     setIntro(result.intro);
     updateLog("서론 생성 완료");
     return result.intro;
@@ -353,11 +363,16 @@ export function TrafficPanel() {
     title: string,
     toc: string,
     intro: string,
-    tone: "정중체" | "음슴체",
-    analysis: Analysis | null
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("본론 생성 중...");
-    const result = await generateBody(mainkeyword, title, toc, intro, tone, analysis || undefined);
+    const result = await generateBody(
+      mainkeyword,
+      title,
+      toc,
+      intro,
+      tone
+    );
     setBody(result.body);
     updateLog("본론 생성 완료");
     return result.body;
@@ -369,8 +384,7 @@ export function TrafficPanel() {
     toc: string,
     intro: string,
     body: string,
-    tone: "정중체" | "음슴체",
-    analysis: Analysis | null
+    tone: ToneType,
   ): Promise<string> => {
     updateLog("결론 생성 중...");
     const result = await generateConclusion(
@@ -379,8 +393,7 @@ export function TrafficPanel() {
       toc,
       intro,
       body,
-      tone,
-      analysis || undefined
+      tone
     );
     setConclusion(result.conclusion);
     updateLog("결론 생성 완료");
@@ -388,7 +401,6 @@ export function TrafficPanel() {
   };
 
   const handleGenerateImagePrompt = async (
-    serviceanalysis: Analysis | null,
     currentContent: {
       title: string;
       toc: string[];
@@ -463,18 +475,15 @@ export function TrafficPanel() {
     try {
       updateLog("🔄 콘텐츠 생성 시작...");
       setProgress(10);
-      setProgressMessage("컨텐츠 초기화 중...");
-      const initResult = await handleInitializeContent();
-      setServiceAdvantages(initResult.serviceanalysis?.advantage_analysis || "");
-      setSubKeywordlist(initResult.subkeywordlist || []);
+      // setProgressMessage("컨텐츠 초기화 중...");
+      // const initResult = await handleInitializeContent();
 
       setProgress(30);
       setProgressMessage("목차 생성 중...");
       const tocResult = await handleGenerateToc(
         mainkeyword,
         title,
-        tone,
-        initResult.serviceanalysis
+        tone,                      // tone 전달
       );
       setToc(tocResult);
 
@@ -484,8 +493,7 @@ export function TrafficPanel() {
         mainkeyword,
         title,
         tocResult,
-        tone,
-        initResult.serviceanalysis
+        tone,                      // tone 전달
       );
       setIntro(introResult);
 
@@ -496,8 +504,7 @@ export function TrafficPanel() {
         title,
         tocResult,
         introResult,
-        tone,
-        initResult.serviceanalysis
+        tone,                      // tone 전달
       );
       setBody(bodyResult);
 
@@ -509,8 +516,7 @@ export function TrafficPanel() {
         tocResult,
         introResult,
         bodyResult,
-        tone,
-        initResult.serviceanalysis
+        tone,                      // tone 전달
       );
       setConclusion(conclusionResult);
 
@@ -540,7 +546,9 @@ export function TrafficPanel() {
         body,
         conclusion,
       };
-      const imagePromptResult = await handleGenerateImagePrompt(serviceAnalysis, currentContent);
+      const imagePromptResult = await handleGenerateImagePrompt(
+        currentContent
+      );
 
       setProgress(50);
       setProgressMessage("이미지 실제 생성 중...");
@@ -550,12 +558,6 @@ export function TrafficPanel() {
       setProgressMessage("최종 결과 저장 중...");
       const finalResult: FinalResult = {
         mainKeyword: mainkeyword,
-        persona: {
-          service_industry: serviceType,
-          service_name: personaServiceName,
-          service_advantage: serviceAdvantages,
-        },
-        service_analysis: serviceAnalysis,
         title,
         toc,
         content: {

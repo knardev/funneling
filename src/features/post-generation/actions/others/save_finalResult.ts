@@ -22,12 +22,6 @@ export async function saveFinalResult(
     // 1. post_generations 테이블에 데이터 삽입
     const postGenerationData: Database['public']['Tables']['post_generations']['Insert'] = {
       keyword: finalResult.mainKeyword,
-      service_name: finalResult.persona.service_name || null,
-      service_industry: finalResult.persona.service_industry || null,
-      service_advantage: finalResult.persona.service_advantage || null,
-      industry_analysis: finalResult.service_analysis.industry_analysis || null,
-      advantage_analysis: finalResult.service_analysis.advantage_analysis || null,
-      target_needs: finalResult.service_analysis.target_needs || null,
       title: finalResult.title,
       toc: finalResult.toc,
       intro: finalResult.content.intro,

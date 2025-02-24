@@ -8,7 +8,7 @@ export default function Page() {
   const router = useRouter();
   return (
     <div className="h-screen flex flex-col">
-      <h1 className="sticky top-0 bg-white z-10 p-4 shadow-md">무한키워드</h1>
+      <h1 className="sticky top-0 font-bold bg-white z-10 p-4 shadow-md">키워드 ㅊㅊ</h1>
       <div className="flex-1 overflow-y-auto">
         <KeywordPanel />
       </div>

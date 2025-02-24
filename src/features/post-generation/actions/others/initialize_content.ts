@@ -1,15 +1,13 @@
 "use server";
 
 import {naverUtils} from "../../utils/naver/naver";
-import { Analysis, Persona,subkeywordlist } from "../../types";
+import { subkeywordlist } from "../../types";
 import { makeClaudeRequest } from "../../utils/ai/claude";
-import { initialContentPrompt } from "../../prompts/initialcontentPrompt";
+import { initialContentPrompt } from "../../prompts/others/initialcontentPrompt";
 
 export async function initializeContent(
     keyword: string,
-    persona?: Persona
   ):Promise<{
-    serviceanalysis?: Analysis;
     subkeywordlist: subkeywordlist;
   }>
 {
@@ -20,10 +18,6 @@ export async function initializeContent(
   const subkeywordlist= await getSearchData(keyword);
   const response = { subkeywordlist};
   
-  if(persona){
-    const serviceanalysis = await analyzeService(persona);
-    return {subkeywordlist, serviceanalysis};
-  }
 
   console.log("initializeContent 응답 데이터", JSON.stringify(response));
   return response;
@@ -33,47 +27,11 @@ const { fetchGeneralSearch, fetchAutocomplete } = naverUtils;
 
 
 
-const extractRelatedSearchTerms = (html: string) => {
-  const relatedTerms: string[] = [];
 
-  try {
-    const relatedSrchPattern = /<ul class="lst_related_srch[^"]*"[\s\S]*?<\/ul>/g;
-    const relatedSrchMatch = html.match(relatedSrchPattern);
-
-    if (relatedSrchMatch) {
-      const listHtml = relatedSrchMatch[0];
-      const itemPattern = /<li class="item"[\s\S]*?<div class="tit">([\s\S]*?)<\/div>/g;
-      let itemMatch;
-
-      // 모든 item의 tit 내용을 추출
-      while ((itemMatch = itemPattern.exec(listHtml)) !== null) {
-        const term = itemMatch[1].trim();
-        if (term) {
-          relatedTerms.push(term);
-        }
-      }
-    }
-
-    return relatedTerms;
-  } catch (error) {
-    console.error('Error parsing HTML:', error);
-    return relatedTerms;
-  }
-};
-
-const removeHTMLTags = (text: string) => {
-  if (!text) return '';
-  
-  return text
-    .replace(/<[^>]*>/g, '')
-    .replace(/,\s*,/g, ', ')
-    .trim();
-};
 
 async function getSearchData(keyword: string) {
   console.log("getSearchData 시작 -키워드:", keyword);
   const html1 = await fetchGeneralSearch(keyword);
-  console.log('HTML 데이터 받음, 길이:', html1.length);
   
   const processRelatedTerms = (html1: string) => {
     console.log('processRelatedTerms 시작');
@@ -130,31 +88,68 @@ async function extractAutocomplete(keyword: string) {
   }
 }
 
+//연관검색어 추출
+const extractRelatedSearchTerms = (html: string) => {
+  const relatedTerms: string[] = [];
 
-
-async function analyzeService(persona: Persona): Promise<Analysis> {
   try {
-    const response = await makeClaudeRequest<Analysis>(
-      initialContentPrompt.generatePrompt(
-        persona.service_name,
-        persona.service_industry,
-        persona.service_advantage
-      ),
-      initialContentPrompt.system,
-    );
+    const relatedSrchPattern = /<ul class="lst_related_srch[^"]*"[\s\S]*?<\/ul>/g;
+    const relatedSrchMatch = html.match(relatedSrchPattern);
 
-    console.log('Raw response from makeClaudeRequest:', response);
+    if (relatedSrchMatch) {
+      const listHtml = relatedSrchMatch[0];
+      const itemPattern = /<li class="item"[\s\S]*?<div class="tit">([\s\S]*?)<\/div>/g;
+      let itemMatch;
 
-    return {
-      industry_analysis: mergeArrays(response.industry_analysis),
-      advantage_analysis: mergeArrays(response.advantage_analysis),
-      target_needs: mergeArrays(response.target_needs)
-    };
+      // 모든 item의 tit 내용을 추출
+      while ((itemMatch = itemPattern.exec(listHtml)) !== null) {
+        const term = itemMatch[1].trim();
+        if (term) {
+          relatedTerms.push(term);
+        }
+      }
+    }
+
+    return relatedTerms;
   } catch (error) {
-    console.error('Error in analyzeService:', error);
-    throw error;
+    console.error('Error parsing HTML:', error);
+    return relatedTerms;
   }
-}
+};
+
+const removeHTMLTags = (text: string) => {
+  if (!text) return '';
+  
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/,\s*,/g, ', ')
+    .trim();
+};
+
+
+// async function analyzeService(persona: Persona): Promise<Analysis> {
+//   try {
+//     const response = await makeClaudeRequest<Analysis>(
+//       initialContentPrompt.generatePrompt(
+//         persona.service_name,
+//         persona.service_industry,
+//         persona.service_advantage
+//       ),
+//       initialContentPrompt.system,
+//     );
+
+//     console.log('Raw response from makeClaudeRequest:', response);
+
+//     return {
+//       industry_analysis: mergeArrays(response.industry_analysis),
+//       advantage_analysis: mergeArrays(response.advantage_analysis),
+//       target_needs: mergeArrays(response.target_needs)
+//     };
+//   } catch (error) {
+//     console.error('Error in analyzeService:', error);
+//     throw error;
+//   }
+// }
 
 function mergeArrays(section: string | null): string {
   if (!section || typeof section !== 'object') {
