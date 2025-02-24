@@ -136,6 +136,7 @@ export const bodyPrompt = {
     title: string,
     toc: string,
     intro: string,
+    tone: string,
     brandContent?: BrnadContent,
     analysis?: AnalysisResults[]
   ): string => {

@@ -227,6 +227,7 @@ export const introPrompt = {
     mainKeyword: string,
     title: string,
     toc: string,
+    tone: string,
     brandContent?: BrnadContent,
     analysis?: AnalysisResults[]
   ): string => {

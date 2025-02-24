@@ -9,6 +9,7 @@ export async function generateBody(
   title: string,
   toc: string,
   intro: string,
+  tone: string,
   brandcontent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {
@@ -18,6 +19,7 @@ export async function generateBody(
     title,
     toc,
     intro,
+    tone,
     brandcontent,
     analysis
   );

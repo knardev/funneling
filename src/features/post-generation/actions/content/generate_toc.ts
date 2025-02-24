@@ -9,6 +9,7 @@ import { makeClaudeRequest } from "../../utils/ai/claude";
 export async function generateToc(
   mainkeyword: string,
   title: string,
+  tone: string,
   brandContent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {
@@ -19,6 +20,7 @@ export async function generateToc(
   const generatedPrompt = tocPrompt.generatePrompt(
     mainkeyword,
     title,
+    tone,
     brandContent,
     analysis
   );

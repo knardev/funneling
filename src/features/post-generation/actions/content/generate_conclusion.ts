@@ -11,6 +11,7 @@ export async function generateConclusion(
   toc: string,
   intro: string,
   body: string,
+  tone: string,
   brandcontent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {
@@ -21,6 +22,7 @@ export async function generateConclusion(
     toc,
     intro,
     body,
+    tone,
     brandcontent,
     analysis
   );

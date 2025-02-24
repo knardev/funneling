@@ -355,10 +355,9 @@ export function TrafficPanel() {
     mainkeyword: string,
     title: string,
     tone: '정중체' | '음슴체',
-    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("목차 생성 중...");
-    const result = await generateToc(mainkeyword, title, tone, analysis || undefined);
+    const result = await generateToc(mainkeyword, title, tone || undefined);
     setToc(result.toc);
     updateLog("목차 생성 완료");
     return result.toc;
@@ -369,10 +368,9 @@ export function TrafficPanel() {
     title: string,
     toc: string,
     tone: '정중체' | '음슴체',
-    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("서론 생성 중...");
-    const result = await generateIntro(mainkeyword, title, toc, tone, analysis || undefined);
+    const result = await generateIntro(mainkeyword, title, toc, tone);
     setIntro(result.intro);
     updateLog("서론 생성 완료");
     return result.intro;
@@ -384,7 +382,6 @@ export function TrafficPanel() {
     toc: string,
     intro: string,
     tone: '정중체' | '음슴체',
-    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("본론 생성 중...");
     const result = await generateBody(
@@ -392,8 +389,7 @@ export function TrafficPanel() {
       title,
       toc,
       intro,
-      tone,
-      analysis || undefined
+      tone
     );
     setBody(result.body);
     updateLog("본론 생성 완료");
@@ -407,7 +403,6 @@ export function TrafficPanel() {
     intro: string,
     body: string,
     tone: '정중체' | '음슴체',
-    analysis: Analysis | null
   ): Promise<string> => {
     updateLog("결론 생성 중...");
     const result = await generateConclusion(
@@ -416,8 +411,7 @@ export function TrafficPanel() {
       toc,
       intro,
       body,
-      tone,
-      analysis || undefined
+      tone
     );
     setConclusion(result.conclusion);
     updateLog("결론 생성 완료");
@@ -518,7 +512,6 @@ export function TrafficPanel() {
         mainkeyword,                // mainkeyword 전달
         title,
         tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
       );
       console.log("title", title);
 
@@ -529,7 +522,6 @@ export function TrafficPanel() {
         title,
         tocResult,
         tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
       );
       console.log("title", title);
       console.log("tocResult", tocResult);
@@ -541,7 +533,6 @@ export function TrafficPanel() {
         tocResult,
         introResult,
         tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
       );
 
       setProgress(90);
@@ -553,7 +544,6 @@ export function TrafficPanel() {
         introResult,
         bodyResult,
         tone,                      // tone 전달
-        initResult.serviceanalysis // analysis 전달
       );
 
       updateLog("✅ 콘텐츠 생성 완료!");

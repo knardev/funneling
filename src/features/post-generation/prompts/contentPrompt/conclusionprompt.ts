@@ -102,6 +102,7 @@ Service Analysis: {analysis}
     toc: string,
     intro: string,
     body: string,
+    tone: string,
     brandContent?: BrnadContent,
     analysis?: AnalysisResults[]
   ): string => {

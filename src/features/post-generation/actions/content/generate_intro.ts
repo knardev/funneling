@@ -9,6 +9,7 @@ export async function generateIntro(
   mainkeyword: string,
   title: string,
   toc: string,
+  tone: string,
   brandContent?: BrnadContent,
   analysis?: AnalysisResults[]
 ) {
@@ -17,6 +18,7 @@ export async function generateIntro(
     mainkeyword,
     title,
     toc,
+    tone,
     brandContent,
     analysis
   );

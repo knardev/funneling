@@ -77,6 +77,7 @@ export const tocPrompt = {
   generatePrompt: (
     mainKeyword: string,
     title: string,
+    tone: string,
     brandContent?: BrnadContent,
     analysis?: AnalysisResults[]
   ): string => {
