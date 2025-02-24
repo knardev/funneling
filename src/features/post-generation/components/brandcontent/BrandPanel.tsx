@@ -158,6 +158,7 @@ export function BrandPanel() {
       correctPlaceholders[parseInt(idx, 10)]
     );
     content = content.replace(/(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi, "$1");
+    content = content.replace(/https?:\/\/[^\s]+/gi, '');
     return content;
   }
 
