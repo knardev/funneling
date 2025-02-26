@@ -146,7 +146,7 @@ export function TrafficPanel() {
     // -------------------------------------
     const CORRECT_MARKER = "@@@CORRECT_PLACEHOLDER@@@"; // 임시 마커
     const correctPlaceholders: string[] = [];
-    content = content.replace(/#\[image(\d+)\]/gi, (match, num) => {
+    content = content.replace(/#\[image(\d+)\]/gi, (match) => {
       correctPlaceholders.push(match);
       return CORRECT_MARKER + (correctPlaceholders.length - 1);
     });
@@ -175,12 +175,19 @@ export function TrafficPanel() {
     content = content.replace(/(\#\[image\d+\])\s*,?\s*\{.*?\}(,\s*KOREA)?/gi, "$1");
   
     // -------------------------------------
-    // 5) http 등이 포함된 링크 텍스트 제거
+    // 5) 링크 텍스트 제거
+    //    - http:// 또는 https:// 로 시작하는 링크
+    //    - www. 로 시작하는 링크
+    //    - 도메인 형식 (예: example.co, test.kr, sample.i, demo.a 등)
     // -------------------------------------
-    content = content.replace(/https?:\/\/[^\s]+/gi, '');
+    content = content.replace(
+      /(?:https?:\/\/|www\.)\S+|\b(?:[a-zA-Z0-9-]+\.)+(?:co|kr|i|a)\b(?:\/\S*)?/gi,
+      ''
+    );
   
     return content;
   }
+  
   
   // =========================================
   // 7) 복사 함수
@@ -193,7 +200,7 @@ export function TrafficPanel() {
         alert("⚠️ 복사할 내용이 없습니다.");
         return;
       }
-      await navigator.clipboard.writeText(combinedText);
+      await navigator.clipboard.writeText(combinedText);  
       alert("✅ 본문이 클립보드에 복사되었습니다!");
     } catch (error) {
       console.error("❌ 복사 실패:", error);
