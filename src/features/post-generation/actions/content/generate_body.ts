@@ -14,7 +14,7 @@ export async function generateBody(
   analysis?: AnalysisResults[]
 ) {
   // 원래 프롬프트 생성
-  const generatedPromptRaw1 = bodyPrompt.generatePrompt(
+  const generatedPromptRaw1 = bodyPrompt.templates.generatePrompt(
     mainkeyword,
     title,
     toc,
@@ -24,8 +24,8 @@ export async function generateBody(
     analysis
   );
   // 제어문자 이스케이프 처리: 실제 개행과 탭 문자를 JSON-safe하게 변환
-  const generatedPrompt2 = generatedPromptRaw1.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-
+  const generatedPrompt2 = generatedPromptRaw1.prompt.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+  const system = bodyPrompt.systems[tone];
     // 추가: 모든 제어 문자를 안전하게 이스케이프
   // const generatedPrompt = escapeControlCharacters(generatedPrompt2);
   console.log("generateBody 프롬프트", generatedPrompt2);
@@ -33,7 +33,7 @@ export async function generateBody(
     optimized_body: string;
   }>(
     generatedPrompt2, // 이스케이프 처리된 프롬프트 사용
-    bodyPrompt.system
+    system
   );
 
   const body = response.optimized_body;
